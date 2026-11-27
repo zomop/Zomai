@@ -1,0 +1,36 @@
+name: Zomai — bot online 24/7
+
+# Bot "tampil online" butuh koneksi gateway terus-menerus.
+# Workflow ini menjalankan bot di GitHub Actions (gratis untuk repo publik, tanpa kartu kredit).
+# Dijalankan tiap 10 menit; concurrency memastikan hanya 1 instance jalan,
+# dan begitu job lama selesai (maks 5j45m), job berikutnya langsung nyambung lagi.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: zomai-bot-online
+  cancel-in-progress: false
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm install --omit=dev --no-audit --no-fund
+
+      - name: Jalankan bot (maks 5 jam 45 menit)
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          PORT: "3000"
+        run: timeout --signal=TERM 20700 node src/index.js || true

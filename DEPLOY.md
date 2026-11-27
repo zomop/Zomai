@@ -1,56 +1,86 @@
-# 🚀 Deploy Bot 24 Jam (dari HP, tanpa laptop)
+# 🚀 Deploy Zomai 24 Jam dari HP (GRATIS, tanpa kartu kredit)
 
-Bot Discord butuh **jalan terus 24 jam** (koneksi permanen). Platform yang cocok:
-- ✅ **Railway** / **Render** — server selalu nyala, gratis/terjangkau
-- ❌ **Vercel** — tidak cocok untuk bot gateway (serverless, mati setelah beberapa detik, bot tidak bisa online terus)
+Bot Zomai sekarang punya **2 mode**:
 
-## Opsi 1: Railway (paling gampang, 2 menit dari HP)
+| Mode | Butuh server? | Status online | Cocok untuk |
+|---|---|---|---|
+| **Interactions (Vercel)** ⭐ | ❌ Tidak | Selalu siap (serverless) | HP, gratis, tanpa kartu |
+| Gateway (Node biasa) | ✅ Ya | Online 24 jam | VPS/Render/Railway |
 
-1. Buka https://railway.app di browser HP → **Login with GitHub**
-2. **New Project** → **Deploy from GitHub repo** → pilih `zomop/Zomai`
-3. Masuk ke project → tab **Variables** → tambah:
-   - `DISCORD_TOKEN` = token bot kamu
-   - `CLIENT_ID` = `1573709992291475497`
-   - `PORT` = `3000`
-4. Tunggu deploy selesai (1-2 menit) → bot online! 🎉
-5. Cek log: harus ada tulisan `✅ Logged in as ...`
+**Mode yang dipakai sekarang: Interactions di Vercel.** Bot tidak butuh server nyala 24 jam — Discord memanggil URL bot setiap kali ada yang memakai slash command. Gratis, tanpa kartu kredit.
 
-> Railway kasih kredit gratis $5/bulan untuk akun baru. Bot kecil ini cuma pakai ~$1-2/bulan.
+---
 
-## Opsi 2: Render (gratis, tapi tidur kalau tidak ada aktivitas)
+## Yang sudah ter-deploy
 
-1. Buka https://render.com → **New → Web Service** → pilih repo `zomop/Zomai`
-2. Isi Environment Variables: `DISCORD_TOKEN`, `CLIENT_ID`
-3. Deploy → bot online.
+- **URL bot:** `https://zomai-bot-andre-dev4.vercel.app`
+- **Endpoint Discord:** `https://zomai-bot-andre-dev4.vercel.app/api/interactions`
+- **Endpoint GitHub webhook:** `https://zomai-bot-andre-dev4.vercel.app/api/github-webhook`
+- **Project Vercel:** `zomai-bot` (repo `zomop/Zomai`, branch `arena/76523376-zomai`)
 
-> Free tier Render tidur setelah 15 menit tidak ada aktivitas. Bot Discord pakai WebSocket jadi biasanya tetap kebangun, tapi kadang delay. Railway lebih stabil.
+Setiap kali kode di-push, Vercel otomatis build & deploy ulang.
 
-## Setelah bot online — 2 langkah terakhir
+---
 
-### 1. Daftarkan slash commands (sekali saja)
-Command global butuh didaftarkan ke Discord. Cara paling gampang dari HP:
-- Buka https://discord.com/developers/applications → application kamu → **Bot** → pastikan bot sudah di-invite ke server
-- Jalankan sekali dari Railway: masuk ke project → **Deployments** → **Run Command**? 
-- Atau: pakai GitHub Actions? Paling simpel: jalankan `npm run deploy` sekali dari komputer/HP dengan Termux, atau minta aku bantu via PR.
+## 3 langkah sekali saja
 
-> Alternatif cepat: isi `GUILD_ID` (ID server kamu) di Variables Railway, lalu restart. Command langsung muncul di server itu (tanpa tunggu 1 jam).
+### 1. Pasang Interactions Endpoint URL di Discord
+1. Buka https://discord.com/developers/applications → pilih aplikasi Zomai
+2. Menu **General Information**
+3. Di kolom **Interactions Endpoint URL**, tempel:
+   ```
+   https://zomai-bot-andre-dev4.vercel.app/api/interactions
+   ```
+4. Klik **Save Changes**. Kalau muncul "All your edits are saved" → berarti bot merespons dengan benar ✅
 
-### 2. Invite bot ke server
-Buka link ini di HP (sudah pakai Application ID kamu):
+> Public key TIDAK perlu diisi manual — bot mengambilnya sendiri dari Discord.
+
+### 2. Daftarkan slash command
+Buka di browser HP:
+```
+https://zomai-bot-andre-dev4.vercel.app/api/setup?secret=zomai2026&guild=ISI_SERVER_ID
+```
+Ganti `ISI_SERVER_ID` dengan ID server Discord kamu (klik kanan nama server → Copy Server ID).
+
+Kalau berhasil, muncul JSON `{"ok":true, ...}` dan command langsung ada di server itu.
+
+### 3. Invite bot ke server
 ```
 https://discord.com/oauth2/authorize?client_id=1573709992291475497&permissions=8&scope=bot%20applications.commands
 ```
-Pilih server → Authorize. Selesai! Bot bisa dipakai di semua server yang meng-invite.
 
-## Test bot
-Di Discord ketik:
-- `/ping` → harus balas Pong
-- `/github-check torvalds` → info akun GitHub
-- `/roblox builderman` → info akun Roblox
+Test: ketik `/ping` di Discord → bot balas Pong 🏓
 
-## Notifikasi GitHub otomatis
-1. Di Discord: admin ketik `/setup-github #channel` (pilih channel tujuan)
-2. Di GitHub repo → Settings → Webhooks → Add webhook:
-   - Payload URL: `https://<domain-railway-kamu>/webhook/github`
-   - Secret: isi bebas, lalu isi juga di Variables Railway sebagai `GITHUB_WEBHOOK_SECRET`
-3. Test: buat PR / push commit → notifikasi muncul di channel Discord 🎉
+---
+
+## Notifikasi GitHub otomatis (tanpa redeploy)
+
+1. Di Discord, admin ketik `/setup-github #channel`
+2. Bot langsung kasih **Payload URL** siap tempel, bentuknya:
+   `https://zomai-bot-andre-dev4.vercel.app/api/github-webhook?channel=<ID_CHANNEL>`
+   (bisa tambah `&repo=owner/nama` kalau cuma mau repo tertentu)
+3. Buka GitHub repo → **Settings → Webhooks → Add webhook**:
+   - **Payload URL:** tempel URL dari bot
+   - **Content type:** `application/json`
+   - **Secret:** `zomaigh2026`
+   - **Events:** Pull requests, Pushes, Issues, Releases, Stars, Forks, Workflow runs
+4. Simpan. GitHub akan kirim test ping → di Discord muncul "✅ Webhook Terhubung".
+
+Event yang masuk ke Discord: PR dibuka/di-merge/ditutup/reopen, push commit, issue buka/tutup, release, star, fork, workflow run.
+
+## Catatan penting
+
+- **Bot tidak muncul "online"** di daftar member. Itu normal untuk mode Interactions; semua slash command tetap jalan.
+- **Slash command butuh ±1 jam** kalau didaftarkan global (tanpa `?guild=`). Pakai `?guild=` supaya langsung muncul.
+- **Ganti token/env:** Vercel → Settings → Environment Variables → Redeploy.
+- **Kalau mau bot tampil online 24 jam** (butuh server), jalankan mode gateway: `npm install && npm start` di VPS/Render. Kode gateway tetap ada di `src/`.
+
+## Env yang dipakai Vercel
+
+| Key | Value |
+|---|---|
+| `DISCORD_TOKEN` | token bot |
+| `CLIENT_ID` | `1573709992291475497` |
+| `SETUP_SECRET` | `zomai2026` (untuk `/api/setup`) |
+| `GITHUB_WEBHOOK_SECRET` | `zomaigh2026` |
+| `GITHUB_CHANNEL_ID` | (isi kalau mau notifikasi GitHub) |
