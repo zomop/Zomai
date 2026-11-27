@@ -14,6 +14,9 @@ concurrency:
   group: zomai-bot-online
   cancel-in-progress: false
 
+permissions:
+  contents: write   # untuk menyimpan data ekonomi (data/economy.json) ke repo
+
 jobs:
   run-bot:
     runs-on: ubuntu-latest
@@ -32,5 +35,6 @@ jobs:
         env:
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PORT: "3000"
         run: timeout --signal=TERM 20700 node src/index.js || true

@@ -68,8 +68,20 @@ try {
   console.warn('⚠️ Webhook server tidak jalan:', e.message);
 }
 
-// Login
-client.login(config.token).catch(err => {
+// Muat data ekonomi (awet via GitHub Actions / file lokal)
+const economy = require('./utils/economy');
+
+async function start() {
+  try {
+    await economy.init();
+    console.log('💰 Data ekonomi siap');
+  } catch (e) {
+    console.warn('⚠️ Data ekonomi gagal dimuat:', e.message);
+  }
+  await client.login(config.token);
+}
+
+start().catch(err => {
   console.error('❌ Gagal login:', err.message);
   console.error('💡 Cek DISCORD_TOKEN di .env, dan pastikan bot sudah di-invite dengan scope bot + applications.commands');
   process.exit(1);

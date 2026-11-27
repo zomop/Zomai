@@ -434,6 +434,55 @@ async function hGithubDisable() {
   return emb('🛑 Matikan Notifikasi GitHub', 'Hapus env `GITHUB_CHANNEL_ID` di Vercel lalu redeploy.', 0xfee75c);
 }
 
+
+// ---------- fallback: game tanpa ekonomi (dipakai kalau bot gateway sedang mati) ----------
+
+function hNoEconomy() {
+  return emb('💰 Fitur ekonomi sedang tidak tersedia', 'Bot sedang menyambung ulang. Coba lagi 1-2 menit lagi ya.', 0xfee75c);
+}
+
+const SLOT_ICONS = ['🍒', '🍋', '🍊', '🔔', '💎', '7️⃣'];
+
+async function hSlots() {
+  const r = [0, 0, 0].map(() => SLOT_ICONS[Math.floor(Math.random() * SLOT_ICONS.length)]);
+  const jackpot = r[0] === r[1] && r[1] === r[2];
+  const e = emb(jackpot ? '🎉 JACKPOT!' : '🎰 Slot', '```\n┃ ' + r.join(' ┃ ') + ' ┃\n```', jackpot ? 0xf1c40f : 0x5865f2);
+  e.footer = { text: 'Taruhan koin hanya tersedia saat bot online' };
+  return e;
+}
+
+const RPS_ICON = { batu: '🪨', gunting: '✂️', kertas: '📄' };
+const RPS_BEAT = { batu: 'gunting', gunting: 'kertas', kertas: 'batu' };
+
+async function hRps(it) {
+  const map = { batu: 'batu', gunting: 'gunting', kertas: 'kertas', rock: 'batu', paper: 'kertas', scissors: 'gunting' };
+  const me = map[String(opt(it.data, 'pilihan') || '').toLowerCase()];
+  if (!me) return errEmb('Pilih: `batu`, `gunting`, atau `kertas`');
+  const bot = Object.keys(RPS_ICON)[Math.floor(Math.random() * 3)];
+  const win = RPS_BEAT[me] === bot;
+  const draw = me === bot;
+  return emb(draw ? '🤝 Seri!' : win ? '🎉 Kamu menang!' : '😢 Kamu kalah', `Kamu: ${RPS_ICON[me]} **${me}**\nZomai: ${RPS_ICON[bot]} **${bot}**`, draw ? 0xfee75c : win ? 0x57f287 : 0xed4245);
+}
+
+function shortHash(str) {
+  let h = 0;
+  for (const c of str) h = (h * 31 + c.charCodeAt(0)) % 100;
+  return h;
+}
+
+async function hShip(it) {
+  const target = opt(it.data, 'user');
+  const pct = Math.max(1, Math.min(100, shortHash([it.user?.id, target].sort().join(':') + '') + 10));
+  const bar = '💖'.repeat(Math.round(pct / 10)) + '🖤'.repeat(10 - Math.round(pct / 10));
+  return emb('💘 Love Meter', `${bar}\n**${pct}%**`, 0xff73fa);
+}
+
+async function hRate(it) {
+  const target = opt(it.data, 'user') || it.user?.id;
+  const score = (shortHash(String(target) + Date.now().toString().slice(0, -4)) % 100) + 1;
+  return emb('⭐ Rating', `**${score}/100**`, 0xf1c40f);
+}
+
 // ==================== router ====================
 
 const HANDLERS = {
@@ -462,6 +511,22 @@ const HANDLERS = {
   'github-status': hGithubStatus,
   'setup-github': hSetupGithub,
   'github-disable': hGithubDisable,
+  // ekonomi (butuh bot online)
+  balance: hNoEconomy,
+  daily: hNoEconomy,
+  work: hNoEconomy,
+  job: hNoEconomy,
+  hunt: hNoEconomy,
+  bet: hNoEconomy,
+  pay: hNoEconomy,
+  leaderboard: hNoEconomy,
+  profile: hNoEconomy,
+  trivia: hNoEconomy,
+  // game tanpa ekonomi
+  slots: hSlots,
+  rps: hRps,
+  ship: hShip,
+  rate: hRate,
 };
 
 // Command yang cepat (tanpa API eksternal) → dijawab langsung, tanpa "thinking"

@@ -4,6 +4,8 @@
  * Base: https://users.roblox.com/v1, https://thumbnails.roblox.com/v1
  */
 
+const { cached } = require('./cache');
+
 const ROBLOX_API = 'https://users.roblox.com/v1';
 const THUMB_API = 'https://thumbnails.roblox.com/v1';
 
@@ -25,6 +27,10 @@ async function fetchJSON(url, options = {}) {
  * @returns {Promise<object|null>}
  */
 async function getUserByUsername(username) {
+  return cached(`rbx:name:${String(username).toLowerCase()}`, 5 * 60 * 1000, () => _getUserByUsername(username));
+}
+
+async function _getUserByUsername(username) {
   const data = await fetchJSON(`${ROBLOX_API}/users/search`, {
     method: 'POST',
     body: JSON.stringify({ keyword: username, excludeBannedUsers: false }),
@@ -37,6 +43,10 @@ async function getUserByUsername(username) {
  * Ambil detail lengkap user by ID
  */
 async function getUserById(userId) {
+  return cached(`rbx:id:${userId}`, 3 * 60 * 1000, () => _getUserById(userId));
+}
+
+async function _getUserById(userId) {
   const [user, counts, presence] = await Promise.allSettled([
     fetchJSON(`${ROBLOX_API}/users/${userId}`),
     fetchJSON(`${ROBLOX_API}/users/${userId}/followers/counts`),
@@ -88,10 +98,12 @@ async function getUserById(userId) {
  * Search user by keyword (untuk /roblox-search)
  */
 async function searchUsers(keyword, limit = 5) {
-  const data = await fetchJSON(`${ROBLOX_API}/users/search`, {
+  const data = await cached(`rbx:search:${String(keyword).toLowerCase()}`, 5 * 60 * 1000, () =>
+    fetchJSON(`${ROBLOX_API}/users/search`, {
     method: 'POST',
-    body: JSON.stringify({ keyword, excludeBannedUsers: false }),
-  });
+      body: JSON.stringify({ keyword, excludeBannedUsers: false }),
+    }),
+  );
   return (data.data || []).slice(0, limit);
 }
 
