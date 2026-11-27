@@ -10,10 +10,17 @@
     "deploy": "node src/deploy-commands.js",
     "webhook": "node src/webhook/server.js"
   },
-  "keywords": ["discord", "bot", "roblox", "github", "zomai"],
+  "keywords": [
+    "discord",
+    "bot",
+    "roblox",
+    "github",
+    "zomai"
+  ],
   "author": "Zomai",
   "license": "MIT",
   "dependencies": {
+    "discord-interactions": "^4.4.0",
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
