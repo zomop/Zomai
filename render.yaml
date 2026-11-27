@@ -1,0 +1,15 @@
+# Render deploy config — bot jalan 24 jam (free tier)
+# Cara pakai: buka render.com → New → Web Service → pilih repo ini
+# Isi Environment Variables: DISCORD_TOKEN, CLIENT_ID
+services:
+  - type: web
+    name: zomai-bot
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000

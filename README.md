@@ -59,7 +59,11 @@ Jadi: **command = langsung pakai. Notifikasi otomatis = atur channel sekali paka
 
 ---
 
-## 🚀 Cara Setup
+## 🚀 Deploy 24 Jam (dari HP)
+
+Lihat **[DEPLOY.md](./DEPLOY.md)** — deploy ke Railway/Render dalam 2 menit dari browser HP, bot online 24 jam tanpa laptop.
+
+## 🚀 Cara Setup (lokal / laptop)
 
 ### 1. Buat Discord Application & Bot
 
@@ -71,7 +75,7 @@ Jadi: **command = langsung pakai. Notifikasi otomatis = atur channel sekali paka
    - ✅ Message Content Intent
 5. Invite bot ke server kamu:
    ```
-   https://discord.com/oauth2/authorize?client_id=APPLICATION_ID&permissions=8&scope=bot%20applications.commands
+   https://discord.com/oauth2/authorize?client_id=1573709992291475497&permissions=8&scope=bot%20applications.commands
    ```
 
 ### 2. Install & Konfigurasi
