@@ -28,7 +28,7 @@ class Store {
     this.repo = process.env.GITHUB_REPOSITORY || ''; // "owner/repo" otomatis di Actions
     this.branch = process.env.GITHUB_REF_NAME || 'main';
 
-    this._timer = setInterval(() => this.flush().catch(() => {}), 30000);
+    this._timer = setInterval(() => this.flush().catch(() => {}), 5 * 60 * 1000);
     this._timer.unref?.();
 
     process.on('SIGTERM', () => { this.flush().finally(() => process.exit(0)); });
