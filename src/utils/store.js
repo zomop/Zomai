@@ -74,6 +74,18 @@ class Store {
     this.dirty = true;
   }
 
+  async refreshSha() {
+    try {
+      const res = await fetch(`${API}/repos/${this.repo}/contents/${this.filePath}?ref=${this.branch}`, {
+        headers: { Authorization: `Bearer ${this.token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'ZomaiBot/1.0' },
+      });
+      if (res.ok) {
+        const body = await res.json();
+        this.sha = body.sha;
+      }
+    } catch {}
+  }
+
   async flush(force = false) {
     if (!this.dirty && !force) return;
     if (this.saving) return;
@@ -100,8 +112,12 @@ class Store {
           const body = await res.json();
           this.sha = body.content?.sha || this.sha;
           this.dirty = false;
-        } else if (res.status === 409) {
-          console.warn('[store] konflik versi, ambil ulang nanti');
+        } else if (res.status === 409 || res.status === 422) {
+          // sha sudah berubah (misal ada commit lain) → ambil ulang lalu coba lagi sekali
+          console.warn('[store] konflik versi, ambil ulang sha...');
+          await this.refreshSha();
+          this.saving = false;
+          return this.flush(true);
         } else {
           console.warn('[store] flush gagal:', res.status, (await res.text().catch(() => '')).slice(0, 120));
         }
