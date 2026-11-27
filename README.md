@@ -157,3 +157,44 @@ Zomai/
 ## 📝 Lisensi
 
 MIT — bebas dipakai & dimodifikasi.
+
+---
+
+## 💬 Command tanpa slash (baru)
+
+Kamu **tidak wajib** pakai slash. Cukup ketik di chat:
+
+```
+roblox builderman
+rbx builderman
+.roblox builderman
+!roblox builderman
+daily
+work
+hunt
+slots 100
+rps batu 50
+```
+
+Slash command tetap jalan semua (`/roblox`, `/daily`, …).
+
+## 💰 Ekonomi & game ala owo
+
+| Command | Fungsi | Cooldown |
+|---|---|---|
+| `balance` / `bal` | Saldo koin, level, pekerjaan | — |
+| `daily` / `harian` | Hadiah harian + streak (maks 2.000) | 24 jam |
+| `work` / `kerja` | Gaji sesuai pekerjaan | 45 menit |
+| `job [nama]` | Lihat / ganti pekerjaan | — |
+| `hunt` / `buru` | Berburu hewan (ada Naga langka) | 30 detik |
+| `bet <koin>` | Taruhan 48% menang | — |
+| `pay @user <koin>` / `tf` | Transfer koin | — |
+| `leaderboard` / `lb` | 10 terkaya di server | — |
+| `profile` / `profil` | Statistik lengkap | — |
+| `slots <taruhan>` | Slot machine | — |
+| `rps batu\|gunting\|kertas [taruhan]` | Suit lawan bot | — |
+| `trivia` | Kuis, jawab di chat, menang 300 koin | — |
+| `ship @user` / `rate @user` | Fun | — |
+
+Level & XP naik otomatis tiap kali pakai command. Data disimpan di `data/economy.json`
+(di-commit otomatis oleh bot tiap ±5 menit), jadi **tidak hilang saat bot restart**.
