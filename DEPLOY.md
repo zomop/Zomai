@@ -1,39 +1,80 @@
 # 🚀 Deploy Bot 24 Jam (dari HP, tanpa laptop)
 
-Bot Discord butuh **jalan terus 24 jam** (koneksi permanen). Platform yang cocok:
-- ✅ **Railway** / **Render** — server selalu nyala, gratis/terjangkau
-- ❌ **Vercel** — tidak cocok untuk bot gateway (serverless, mati setelah beberapa detik, bot tidak bisa online terus)
+Bot Discord butuh **jalan terus 24 jam** (koneksi permanen).
 
-## Opsi 1: Railway (paling gampang, 2 menit dari HP)
+- ✅ **Render (gratis)** — rekomendasi utama, dari browser HP
+- ✅ **Replit (gratis)** — paling gampang, ada aplikasi HP
+- ✅ **Oracle Cloud (gratis selamanya)** — paling awet, tapi setup lebih ribet
+- ❌ **Vercel** — tidak cocok untuk bot gateway (serverless, mati setelah beberapa detik)
+- ⚠️ **Railway** — bagus, tapi trial gratis cepat habis
 
-1. Buka https://railway.app di browser HP → **Login with GitHub**
-2. **New Project** → **Deploy from GitHub repo** → pilih `zomop/Zomai`
-3. Masuk ke project → tab **Variables** → tambah:
+---
+
+## Opsi 1: Render — GRATIS, rekomendasi utama ⭐
+
+Render free tier: 750 jam/bulan (cukup untuk 1 bot 24 jam). Kelemahan: tidur setelah 15 menit tidak ada yang akses. Solusinya pakai **UptimeRobot** (gratis) untuk ping tiap 5 menit biar tidak tidur.
+
+### Langkah 1: Deploy ke Render
+1. Buka https://render.com di browser HP → daftar/login pakai GitHub
+2. **New → Web Service** → pilih repo `zomop/Zomai`
+3. Isi:
+   - **Name:** `zomai-bot`
+   - **Runtime:** Node
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm start`
+4. **Environment Variables** → tambah:
    - `DISCORD_TOKEN` = token bot kamu
    - `CLIENT_ID` = `1573709992291475497`
    - `PORT` = `3000`
-4. Tunggu deploy selesai (1-2 menit) → bot online! 🎉
-5. Cek log: harus ada tulisan `✅ Logged in as ...`
+5. Klik **Create Web Service** → tunggu 2-3 menit → bot online! 🎉
+6. Catat URL-nya, contoh: `https://zomai-bot.onrender.com`
 
-> Railway kasih kredit gratis $5/bulan untuk akun baru. Bot kecil ini cuma pakai ~$1-2/bulan.
+### Langkah 2: Biar tidak tidur (UptimeRobot, gratis)
+1. Buka https://uptimerobot.com → daftar gratis
+2. **Add New Monitor** → HTTP(s) → URL: `https://zomai-bot.onrender.com/health`
+3. Interval: 5 menit → Save.
+4. Selesai! Bot tidak akan tidur lagi.
 
-## Opsi 2: Render (gratis, tapi tidur kalau tidak ada aktivitas)
+> Render free kadang masih tidur 1-2 menit saat pertama diakses setelah lama. Itu normal. Bot akan otomatis online lagi.
 
-1. Buka https://render.com → **New → Web Service** → pilih repo `zomop/Zomai`
-2. Isi Environment Variables: `DISCORD_TOKEN`, `CLIENT_ID`
-3. Deploy → bot online.
+---
 
-> Free tier Render tidur setelah 15 menit tidak ada aktivitas. Bot Discord pakai WebSocket jadi biasanya tetap kebangun, tapi kadang delay. Railway lebih stabil.
+## Opsi 2: Replit — GRATIS, paling gampang dari HP
+
+Replit ada aplikasi HP-nya, jadi paling nyaman kalau cuma punya HP.
+
+1. Buka https://replit.com atau install aplikasi Replit di HP → daftar
+2. **+ Create** → **Import from GitHub** → paste `https://github.com/zomop/Zomai`
+3. Di **Secrets** (ikon gembok), tambah:
+   - `DISCORD_TOKEN` = token bot kamu
+   - `CLIENT_ID` = `1573709992291475497`
+4. Klik **Run** ▶️ → bot online!
+5. Biar tidak tidur: pasang UptimeRobot seperti di atas, URL-nya dari Replit (klik **Webview** → copy URL).
+
+> Replit free tidur setelah ~20 menit. UptimeRobot menjaga biar tetap nyala.
+
+---
+
+## Opsi 3: Oracle Cloud — GRATIS SELAMANYA (paling awet)
+
+Oracle Cloud kasih VPS gratis selamanya (Always Free). Tidak tidur, tidak ada batas jam.
+
+1. Buka https://oracle.com/cloud/free → daftar (butuh kartu kredit untuk verifikasi, tidak dipotong)
+2. Buat **Compute Instance** (VM.Standard.E2.Micro / Ampere ARM) → Ubuntu
+3. SSH masuk, install Node.js, clone repo, isi `.env`, jalankan `npm start` pakai `pm2` biar jalan terus.
+
+> Setup-nya lebih ribet dari HP. Kalau mau, tanya aku step-by-step-nya.
+
+---
 
 ## Setelah bot online — 2 langkah terakhir
 
 ### 1. Daftarkan slash commands (sekali saja)
 Command global butuh didaftarkan ke Discord. Cara paling gampang dari HP:
-- Buka https://discord.com/developers/applications → application kamu → **Bot** → pastikan bot sudah di-invite ke server
-- Jalankan sekali dari Railway: masuk ke project → **Deployments** → **Run Command**? 
-- Atau: pakai GitHub Actions? Paling simpel: jalankan `npm run deploy` sekali dari komputer/HP dengan Termux, atau minta aku bantu via PR.
+- Isi `GUILD_ID` (ID server kamu) di Environment Variables platform deploy, lalu restart. Command langsung muncul di server itu.
+- Atau jalankan `npm run deploy` sekali dari HP pakai Termux / Replit Shell.
 
-> Alternatif cepat: isi `GUILD_ID` (ID server kamu) di Variables Railway, lalu restart. Command langsung muncul di server itu (tanpa tunggu 1 jam).
+> Cara dapat Server ID: Discord → klik kanan nama server → Copy Server ID.
 
 ### 2. Invite bot ke server
 Buka link ini di HP (sudah pakai Application ID kamu):
@@ -51,6 +92,6 @@ Di Discord ketik:
 ## Notifikasi GitHub otomatis
 1. Di Discord: admin ketik `/setup-github #channel` (pilih channel tujuan)
 2. Di GitHub repo → Settings → Webhooks → Add webhook:
-   - Payload URL: `https://<domain-railway-kamu>/webhook/github`
-   - Secret: isi bebas, lalu isi juga di Variables Railway sebagai `GITHUB_WEBHOOK_SECRET`
+   - Payload URL: `https://<url-deploy-kamu>/webhook/github`
+   - Secret: isi bebas, lalu isi juga di Variables sebagai `GITHUB_WEBHOOK_SECRET`
 3. Test: buat PR / push commit → notifikasi muncul di channel Discord 🎉
