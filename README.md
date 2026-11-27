@@ -1,0 +1,2 @@
+# Zomai
+A discord bot
