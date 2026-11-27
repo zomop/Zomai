@@ -3,6 +3,8 @@
  * Docs: https://docs.github.com/en/rest
  */
 
+const { cached } = require('./cache');
+
 const GITHUB_API = 'https://api.github.com';
 const headers = {
   'Accept': 'application/vnd.github+json',
@@ -21,15 +23,17 @@ async function fetchJSON(path) {
 }
 
 async function getRepo(owner, repo) {
-  return fetchJSON(`/repos/${owner}/${repo}`);
+  return cached(`gh:repo:${owner}/${repo}`.toLowerCase(), 3 * 60 * 1000, () => fetchJSON(`/repos/${owner}/${repo}`));
 }
 
 async function getUser(username) {
-  return fetchJSON(`/users/${username}`);
+  return cached(`gh:user:${String(username).toLowerCase()}`, 3 * 60 * 1000, () => fetchJSON(`/users/${username}`));
 }
 
 async function getOpenPRs(owner, repo, perPage = 5) {
-  const data = await fetchJSON(`/repos/${owner}/${repo}/pulls?state=open&per_page=${perPage}&sort=created&direction=desc`);
+  const data = await cached(`gh:prs:${owner}/${repo}:${perPage}`.toLowerCase(), 60 * 1000, () =>
+    fetchJSON(`/repos/${owner}/${repo}/pulls?state=open&per_page=${perPage}&sort=created&direction=desc`),
+  );
   return data || [];
 }
 
@@ -44,7 +48,9 @@ async function getRepoContributors(owner, repo, perPage = 5) {
 }
 
 async function getUserRepos(username, perPage = 5) {
-  const data = await fetchJSON(`/users/${username}/repos?per_page=${perPage}&sort=updated`);
+  const data = await cached(`gh:repos:${String(username).toLowerCase()}:${perPage}`, 3 * 60 * 1000, () =>
+    fetchJSON(`/users/${username}/repos?per_page=${perPage}&sort=updated`),
+  );
   return data || [];
 }
 
