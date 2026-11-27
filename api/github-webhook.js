@@ -14,6 +14,13 @@ const CHANNEL_ID = process.env.GITHUB_CHANNEL_ID || '';
 const SECRET = process.env.GITHUB_WEBHOOK_SECRET || '';
 const API = 'https://discord.com/api/v10';
 
+function sendJson(res, code, obj) {
+  if (res.headersSent) return;
+  res.statusCode = code;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.end(JSON.stringify(obj));
+}
+
 function readRawBody(req) {
   return new Promise((resolve, reject) => {
     if (Buffer.isBuffer(req.body)) return resolve(req.body.toString('utf8'));
@@ -56,17 +63,17 @@ const fields = (e, f) => {
   return e;
 };
 
-module.exports = async (req, res) => {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+async function handle(req, res) {
+  if (req.method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' });
 
   const raw = await readRawBody(req);
-  if (!verify(raw, req.headers['x-hub-signature-256'])) return res.status(401).json({ error: 'Invalid signature' });
+  if (!verify(raw, req.headers['x-hub-signature-256'])) return sendJson(res, 401, { error: 'Invalid signature' });
 
   let p;
   try {
     p = raw ? JSON.parse(raw) : {};
   } catch {
-    return res.status(400).json({ error: 'Invalid JSON' });
+    return sendJson(res, 400, { error: 'Invalid JSON' });
   }
 
   const event = req.headers['x-github-event'];
@@ -117,5 +124,14 @@ module.exports = async (req, res) => {
     console.error('[github-webhook]', e.message);
   }
 
-  return res.status(200).json({ ok: true, event });
+  return sendJson(res, 200, { ok: true, event });
+};
+
+module.exports = async (req, res) => {
+  try {
+    return await handle(req, res);
+  } catch (e) {
+    console.error('[github-webhook] fatal:', e);
+    return sendJson(res, 500, { error: 'Internal error', detail: e.message });
+  }
 };

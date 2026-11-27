@@ -23,6 +23,15 @@ const TYPE_DEFERRED = 5;
 const FLAG_EPHEMERAL = 64;
 
 // ==================== utils ====================
+/** Kirim response pakai API Node murni (tidak bergantung helper platform) */
+function send(res, code, obj) {
+  if (res.headersSent) return;
+  res.statusCode = code;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.end(JSON.stringify(obj));
+}
+
 
 function readRawBody(req) {
   return new Promise((resolve, reject) => {
@@ -459,7 +468,7 @@ const PERM_CHECKS = {
 function reply(res, embed, ephemeral) {
   const data = { embeds: [embed] };
   if (ephemeral) data.flags = FLAG_EPHEMERAL;
-  res.status(200).json({ type: TYPE_MESSAGE, data });
+  send(res, 200, { type: TYPE_MESSAGE, data });
 }
 
 async function editOriginal(token, embed) {
@@ -471,38 +480,38 @@ async function editOriginal(token, embed) {
   if (!r.ok) console.error('[zomai] editOriginal', r.status, (await r.text().catch(() => '')).slice(0, 200));
 }
 
-module.exports = async (req, res) => {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+async function handle(req, res) {
+  if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
   try {
     await getPublicKey();
   } catch (e) {
     console.error('[zomai] gagal ambil public key:', e.message);
-    return res.status(500).json({ error: 'Public key bot tidak bisa diambil', detail: e.message });
+    return send(res, 500, { error: 'Public key bot tidak bisa diambil', detail: e.message });
   }
 
   const raw = await readRawBody(req);
   const sig = req.headers['x-signature-ed25519'];
   const ts = req.headers['x-signature-timestamp'];
-  if (!sig || !ts) return res.status(401).json({ error: 'Missing signature headers' });
+  if (!sig || !ts) return send(res, 401, { error: 'Missing signature headers' });
 
   let ok = false;
   try {
     ok = verifySignature(PUBLIC_KEY, ts, raw, sig);
   } catch (e) {
     console.error('[zomai] verify', e.message);
-    return res.status(401).json({ error: 'Signature verification failed', detail: e.message });
+    return send(res, 401, { error: 'Signature verification failed', detail: e.message });
   }
-  if (!ok) return res.status(401).json({ error: 'Invalid request signature' });
+  if (!ok) return send(res, 401, { error: 'Invalid request signature' });
 
   let it;
   try {
     it = JSON.parse(raw);
   } catch {
-    return res.status(400).json({ error: 'Invalid JSON' });
+    return send(res, 400, { error: 'Invalid JSON' });
   }
 
-  if (it.type === 1) return res.status(200).json({ type: TYPE_PONG });
-  if (it.type !== 2) return res.status(400).json({ error: 'Unsupported interaction type' });
+  if (it.type === 1) return send(res, 200, { type: TYPE_PONG });
+  if (it.type !== 2) return send(res, 400, { error: 'Unsupported interaction type' });
 
   const name = it.data?.name;
   const handler = HANDLERS[name];
@@ -515,7 +524,7 @@ module.exports = async (req, res) => {
   }
 
   // ACK cepat (<3 detik), hasil dikirim menyusul
-  res.status(200).json({ type: TYPE_DEFERRED });
+  send(res, 200, { type: TYPE_DEFERRED });
 
   try {
     const embed = await handler(it);
@@ -523,5 +532,14 @@ module.exports = async (req, res) => {
   } catch (e) {
     console.error(`[zomai] /${name}:`, e.message);
     await editOriginal(it.token, errEmb(e.message || 'Terjadi error. Coba lagi nanti.')).catch(() => {});
+  }
+};
+
+module.exports = async (req, res) => {
+  try {
+    return await handle(req, res);
+  } catch (e) {
+    console.error('[zomai] fatal:', e);
+    return send(res, 500, { error: 'Internal error', detail: e.message });
   }
 };
