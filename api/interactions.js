@@ -464,6 +464,13 @@ const HANDLERS = {
   'github-disable': hGithubDisable,
 };
 
+// Command yang cepat (tanpa API eksternal) → dijawab langsung, tanpa "thinking"
+const INSTANT = new Set([
+  'ping', 'help', '8ball', 'coinflip', 'dice', 'github-status', 'github-disable',
+  'setup-github', 'warn', 'avatar', 'serverinfo', 'userinfo', 'botinfo', 'invite',
+  'kick', 'ban', 'timeout', 'clear',
+]);
+
 const PERM_CHECKS = {
   kick: [1n << 1n, 'Kick Members'],
   ban: [1n << 2n, 'Ban Members'],
@@ -530,7 +537,17 @@ async function handle(req, res) {
     if ((perms & check[0]) === 0n) return reply(res, errEmb(`Kamu butuh permission **${check[1]}** untuk memakai \`/${name}\`.`), true);
   }
 
-  // ACK cepat (<3 detik), hasil dikirim menyusul
+  // Command cepat → balas langsung (tanpa status "thinking")
+  if (INSTANT.has(name)) {
+    try {
+      return reply(res, await handler(it), false);
+    } catch (e) {
+      console.error(`[zomai] /${name}:`, e.message);
+      return reply(res, errEmb(e.message || 'Terjadi error. Coba lagi nanti.'), true);
+    }
+  }
+
+  // Command yang manggil API luar (Roblox/GitHub/meme) → defer supaya tidak kena limit 3 detik
   send(res, 200, { type: TYPE_DEFERRED });
 
   try {
