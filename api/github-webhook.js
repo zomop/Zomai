@@ -42,15 +42,19 @@ function verify(raw, sig) {
   return expected.length === got.length && crypto.timingSafeEqual(expected, got);
 }
 
-async function send(embed) {
-  if (!CHANNEL_ID) return console.warn('[github-webhook] GITHUB_CHANNEL_ID belum diset');
-  const res = await fetch(`${API}/channels/${CHANNEL_ID}/messages`, {
+async function send(embed, channelOverride) {
+  const target = channelOverride || CHANNEL_ID;
+  if (!target) return console.warn('[github-webhook] channel belum diset (env GITHUB_CHANNEL_ID atau ?channel=)');
+  const res = await fetch(`${API}/channels/${target}/messages`, {
     method: 'POST',
     headers: { Authorization: `Bot ${TOKEN}`, 'Content-Type': 'application/json', 'User-Agent': 'ZomaiBot/1.0' },
     body: JSON.stringify({ embeds: [embed] }),
   });
   if (!res.ok) console.error('[github-webhook] send failed', res.status, (await res.text().catch(() => '')).slice(0, 200));
 }
+
+let CH_OVERRIDE = null;
+const sendTo = (embed) => send(embed, CH_OVERRIDE);
 
 const emb = (title, description, color, url) => {
   const e = { title, color, timestamp: new Date().toISOString() };
@@ -76,49 +80,60 @@ async function handle(req, res) {
     return sendJson(res, 400, { error: 'Invalid JSON' });
   }
 
+  let q = {};
+  try {
+    q = Object.fromEntries(new URL(req.url || '/', 'http://x').searchParams.entries());
+  } catch {}
+  const channelOverride = /^\d{15,25}$/.test(q.channel || '') ? q.channel : null;
+  CH_OVERRIDE = channelOverride;
+  const repoFilter = (q.repo || '').trim().toLowerCase();
+
   const event = req.headers['x-github-event'];
   const repo = p.repository?.full_name || '—';
+  if (repoFilter && repo.toLowerCase() !== repoFilter) {
+    return sendJson(res, 200, { ok: true, skipped: 'repo tidak cocok filter' });
+  }
 
   try {
     if (event === 'ping') {
-      await send(emb('✅ Webhook Terhubung', `Repo **${repo}** berhasil terhubung ke Zomai Bot.`, 0x57f287, p.repository?.html_url));
+      await sendTo(emb('✅ Webhook Terhubung', `Repo **${repo}** berhasil terhubung ke Zomai Bot.`, 0x57f287, p.repository?.html_url));
     } else if (event === 'pull_request') {
       const pr = p.pull_request || {};
       if (p.action === 'opened') {
-        await send(fields(emb(`🔀 PR Dibuka: #${pr.number}`, pr.title + '\n\n' + (pr.body || '').slice(0, 400), 0x8957e5, pr.html_url), [
+        await sendTo(fields(emb(`🔀 PR Dibuka: #${pr.number}`, pr.title + '\n\n' + (pr.body || '').slice(0, 400), 0x8957e5, pr.html_url), [
           { name: '📦 Repo', value: repo, inline: true },
           { name: '👤 Author', value: `@${pr.user?.login || '?'}`, inline: true },
         ]));
       } else if (p.action === 'closed' && pr.merged) {
-        await send(emb(`✅ PR Di-merge: #${pr.number}`, `**${pr.title}**\nDi-merge oleh @${pr.merged_by?.login || '?'}`, 0x57f287, pr.html_url));
+        await sendTo(emb(`✅ PR Di-merge: #${pr.number}`, `**${pr.title}**\nDi-merge oleh @${pr.merged_by?.login || '?'}`, 0x57f287, pr.html_url));
       } else if (p.action === 'closed') {
-        await send(emb(`❌ PR Ditutup: #${pr.number}`, `**${pr.title}**`, 0xed4245, pr.html_url));
+        await sendTo(emb(`❌ PR Ditutup: #${pr.number}`, `**${pr.title}**`, 0xed4245, pr.html_url));
       } else if (p.action === 'reopened') {
-        await send(emb(`🔄 PR Dibuka Ulang: #${pr.number}`, `**${pr.title}**`, 0xfee75c, pr.html_url));
+        await sendTo(emb(`🔄 PR Dibuka Ulang: #${pr.number}`, `**${pr.title}**`, 0xfee75c, pr.html_url));
       }
     } else if (event === 'push') {
       const commits = p.commits || [];
       if (commits.length) {
         const branch = String(p.ref || '').replace('refs/heads/', '');
-        await send(emb(`📤 Push ke ${repo} (${branch})`, commits.slice(0, 5).map(c => `• ${String(c.message).split('\n')[0].slice(0, 80)}`).join('\n'), 0x5865f2, p.compare));
+        await sendTo(emb(`📤 Push ke ${repo} (${branch})`, commits.slice(0, 5).map(c => `• ${String(c.message).split('\n')[0].slice(0, 80)}`).join('\n'), 0x5865f2, p.compare));
       }
     } else if (event === 'issues') {
       const issue = p.issue || {};
       if (p.action === 'opened') {
-        await send(emb(`🐛 Issue Dibuka: #${issue.number}`, `**${issue.title}**\n\n${(issue.body || '').slice(0, 400)}`, 0xfee75c, issue.html_url));
+        await sendTo(emb(`🐛 Issue Dibuka: #${issue.number}`, `**${issue.title}**\n\n${(issue.body || '').slice(0, 400)}`, 0xfee75c, issue.html_url));
       } else if (p.action === 'closed') {
-        await send(emb(`✅ Issue Ditutup: #${issue.number}`, `**${issue.title}**`, 0x57f287, issue.html_url));
+        await sendTo(emb(`✅ Issue Ditutup: #${issue.number}`, `**${issue.title}**`, 0x57f287, issue.html_url));
       }
     } else if (event === 'release') {
-      await send(emb(`🚀 Release ${p.release?.tag_name}`, (p.release?.body || '').slice(0, 700), 0xf1c40f, p.release?.html_url));
+      await sendTo(emb(`🚀 Release ${p.release?.tag_name}`, (p.release?.body || '').slice(0, 700), 0xf1c40f, p.release?.html_url));
     } else if (event === 'star') {
-      await send(emb('⭐ Star Baru!', `**${repo}** dapat star dari @${p.sender?.login || '?'}`, 0xf1c40f, p.repository?.html_url));
+      await sendTo(emb('⭐ Star Baru!', `**${repo}** dapat star dari @${p.sender?.login || '?'}`, 0xf1c40f, p.repository?.html_url));
     } else if (event === 'fork') {
-      await send(emb('🍴 Repo Di-fork!', `Fork baru: **${p.forkee?.full_name}**`, 0x5865f2, p.forkee?.html_url));
+      await sendTo(emb('🍴 Repo Di-fork!', `Fork baru: **${p.forkee?.full_name}**`, 0x5865f2, p.forkee?.html_url));
     } else if (event === 'workflow_run') {
       const w = p.workflow_run || {};
       const okRun = w.conclusion === 'success';
-      await send(emb(`${okRun ? '✅' : '❌'} Workflow ${w.name}: ${w.conclusion || w.status}`, `Branch: \`${w.head_branch || '?'}\``, okRun ? 0x57f287 : 0xed4245, w.html_url));
+      await sendTo(emb(`${okRun ? '✅' : '❌'} Workflow ${w.name}: ${w.conclusion || w.status}`, `Branch: \`${w.head_branch || '?'}\``, okRun ? 0x57f287 : 0xed4245, w.html_url));
     }
   } catch (e) {
     console.error('[github-webhook]', e.message);

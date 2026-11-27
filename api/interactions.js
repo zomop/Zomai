@@ -416,9 +416,16 @@ async function hGithubStatus() {
 async function hSetupGithub(it) {
   const ch = opt(it.data, 'channel');
   const repo = opt(it.data, 'repo');
+  const app = process.env.APP_URL || 'https://zomai-bot-andre-dev4.vercel.app';
+  const hookUrl = `${app}/api/github-webhook?channel=${ch}${repo ? `&repo=${repo}` : ''}`;
   return emb(
-    '⚙️ Setup GitHub (Mode Vercel)',
-    `Channel pilihanmu: <#${ch}>${repo ? `\nFilter repo: \`${repo}\`` : ''}\n\n**Langkah lanjut:**\n1. Buka Vercel → project \`zomai-bot\` → Settings → Environment Variables\n2. Tambah \`GITHUB_CHANNEL_ID\` = \`${ch}\`\n3. Deployments → ⋯ → Redeploy\n4. Di GitHub repo → Settings → Webhooks → Add webhook\n   • Payload URL: \`https://<project>.vercel.app/api/github-webhook\`\n   • Content type: \`application/json\`\n   • Secret: \`zomaigh2026\``,
+    '⚙️ Setup GitHub — siap pakai',
+    `**Buka GitHub → repo → Settings → Webhooks → Add webhook**\n` +
+      `• **Payload URL:**\n\`${hookUrl}\`\n` +
+      `• **Content type:** \`application/json\`\n` +
+      `• **Secret:** \`zomaigh2026\`\n` +
+      `• **Events:** Pull requests, Pushes, Issues, Releases, Stars, Forks, Workflow runs\n\n` +
+      `Setelah disimpan, PR di-merge / push / issue otomatis masuk ke <#${ch}>.`,
     0x5865f2,
   );
 }
