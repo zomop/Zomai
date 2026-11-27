@@ -1,8 +1,4 @@
 {
-  "version": 2,
-  "functions": {
-    "api/interactions.js": { "maxDuration": 30 },
-    "api/github-webhook.js": { "maxDuration": 30 },
-    "api/setup.js": { "maxDuration": 30 }
-  }
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null
 }
