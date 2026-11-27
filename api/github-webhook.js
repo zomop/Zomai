@@ -1,66 +1,68 @@
 /**
- * GitHub Webhook Endpoint (Vercel Serverless)
- * Terima event GitHub → kirim notifikasi ke Discord via REST API (bot token).
+ * GitHub webhook → Discord (Vercel serverless, zero dependency)
+ * URL: https://<project>.vercel.app/api/github-webhook
  *
  * Env:
- * - DISCORD_TOKEN
- * - GITHUB_CHANNEL_ID (channel tujuan notifikasi)
- * - GITHUB_WEBHOOK_SECRET (opsional, untuk verifikasi signature)
+ *   DISCORD_TOKEN, GITHUB_CHANNEL_ID, GITHUB_WEBHOOK_SECRET (opsional tapi disarankan)
  */
+'use strict';
+
 const crypto = require('crypto');
-const { EmbedBuilder } = require('discord.js');
 
 const TOKEN = process.env.DISCORD_TOKEN || '';
 const CHANNEL_ID = process.env.GITHUB_CHANNEL_ID || '';
 const SECRET = process.env.GITHUB_WEBHOOK_SECRET || '';
+const API = 'https://discord.com/api/v10';
 
-async function sendToDiscord(embed) {
-  if (!CHANNEL_ID) {
-    console.warn('GITHUB_CHANNEL_ID belum diisi');
-    return;
-  }
-  const res = await fetch(`https://discord.com/api/v10/channels/${CHANNEL_ID}/messages`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bot ${TOKEN}`,
-      'Content-Type': 'application/json',
-      'User-Agent': 'ZomaiBot/1.0',
-    },
-    body: JSON.stringify({ embeds: [embed.toJSON()] }),
+function readRawBody(req) {
+  return new Promise((resolve, reject) => {
+    if (Buffer.isBuffer(req.body)) return resolve(req.body.toString('utf8'));
+    if (typeof req.body === 'string') return resolve(req.body);
+    if (req.body && typeof req.body === 'object') return resolve(JSON.stringify(req.body));
+    if (!req.readable) return resolve('');
+    const chunks = [];
+    req.on('data', c => chunks.push(c));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
   });
-  if (!res.ok) {
-    console.error('Discord send failed:', res.status, await res.text().catch(() => ''));
-  }
-}
-
-async function readRawBody(req) {
-  if (Buffer.isBuffer(req.body)) return req.body.toString('utf8');
-  if (typeof req.body === 'string') return req.body;
-  if (req.body && typeof req.body === 'object') return JSON.stringify(req.body);
-  if (!req.readable) return '';
-  const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
-  return Buffer.concat(chunks).toString('utf8');
 }
 
 function verify(raw, sig) {
   if (!SECRET) return true;
   if (!sig) return false;
-  const hmac = crypto.createHmac('sha256', SECRET).update(raw).digest('hex');
-  const expected = Buffer.from('sha256=' + hmac);
-  const received = Buffer.from(String(sig));
-  return expected.length === received.length && crypto.timingSafeEqual(expected, received);
+  const expected = Buffer.from('sha256=' + crypto.createHmac('sha256', SECRET).update(raw).digest('hex'));
+  const got = Buffer.from(String(sig));
+  return expected.length === got.length && crypto.timingSafeEqual(expected, got);
 }
+
+async function send(embed) {
+  if (!CHANNEL_ID) return console.warn('[github-webhook] GITHUB_CHANNEL_ID belum diset');
+  const res = await fetch(`${API}/channels/${CHANNEL_ID}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bot ${TOKEN}`, 'Content-Type': 'application/json', 'User-Agent': 'ZomaiBot/1.0' },
+    body: JSON.stringify({ embeds: [embed] }),
+  });
+  if (!res.ok) console.error('[github-webhook] send failed', res.status, (await res.text().catch(() => '')).slice(0, 200));
+}
+
+const emb = (title, description, color, url) => {
+  const e = { title, color, timestamp: new Date().toISOString() };
+  if (description) e.description = String(description).slice(0, 900);
+  if (url) e.url = url;
+  return e;
+};
+const fields = (e, f) => {
+  e.fields = f;
+  return e;
+};
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const raw = await readRawBody(req);
-  if (!verify(raw, req.headers['x-hub-signature-256'])) {
-    return res.status(401).json({ error: 'Invalid signature' });
-  }
+  if (!verify(raw, req.headers['x-hub-signature-256'])) return res.status(401).json({ error: 'Invalid signature' });
 
-  let p = {};
+  let p;
   try {
     p = raw ? JSON.parse(raw) : {};
   } catch {
@@ -71,60 +73,49 @@ module.exports = async (req, res) => {
   const repo = p.repository?.full_name || '—';
 
   try {
-    if (event === 'pull_request') {
-      const pr = p.pull_request;
+    if (event === 'ping') {
+      await send(emb('✅ Webhook Terhubung', `Repo **${repo}** berhasil terhubung ke Zomai Bot.`, 0x57f287, p.repository?.html_url));
+    } else if (event === 'pull_request') {
+      const pr = p.pull_request || {};
       if (p.action === 'opened') {
-        await sendToDiscord(new EmbedBuilder().setColor(0x8957E5)
-          .setTitle(`🔀 PR Dibuka: #${pr.number}`).setURL(pr.html_url)
-          .setDescription((pr.body || '_Tidak ada deskripsi_').slice(0, 500))
-          .addFields({ name: '📦 Repo', value: repo, inline: true }, { name: '👤 Author', value: `@${pr.user.login}`, inline: true })
-          .setTimestamp());
+        await send(fields(emb(`🔀 PR Dibuka: #${pr.number}`, pr.title + '\n\n' + (pr.body || '').slice(0, 400), 0x8957e5, pr.html_url), [
+          { name: '📦 Repo', value: repo, inline: true },
+          { name: '👤 Author', value: `@${pr.user?.login || '?'}`, inline: true },
+        ]));
       } else if (p.action === 'closed' && pr.merged) {
-        await sendToDiscord(new EmbedBuilder().setColor(0x57F287)
-          .setTitle(`✅ PR Di-merge: #${pr.number}`).setURL(pr.html_url)
-          .setDescription(`**${pr.title}**\nDi-merge oleh @${pr.merged_by?.login || 'unknown'}`)
-          .setTimestamp());
+        await send(emb(`✅ PR Di-merge: #${pr.number}`, `**${pr.title}**\nDi-merge oleh @${pr.merged_by?.login || '?'}`, 0x57f287, pr.html_url));
       } else if (p.action === 'closed') {
-        await sendToDiscord(new EmbedBuilder().setColor(0xED4245)
-          .setTitle(`❌ PR Ditutup: #${pr.number}`).setURL(pr.html_url)
-          .setDescription(`**${pr.title}**`).setTimestamp());
+        await send(emb(`❌ PR Ditutup: #${pr.number}`, `**${pr.title}**`, 0xed4245, pr.html_url));
+      } else if (p.action === 'reopened') {
+        await send(emb(`🔄 PR Dibuka Ulang: #${pr.number}`, `**${pr.title}**`, 0xfee75c, pr.html_url));
       }
     } else if (event === 'push') {
       const commits = p.commits || [];
       if (commits.length) {
-        const branch = (p.ref || '').replace('refs/heads/', '');
-        await sendToDiscord(new EmbedBuilder().setColor(0x5865F2)
-          .setTitle(`📤 Push ke ${repo} (${branch})`).setURL(p.repository.html_url)
-          .setDescription(commits.slice(0, 5).map(c => `• [${c.message.split('\n')[0].slice(0, 80)}](${c.url})`).join('\n'))
-          .setTimestamp());
+        const branch = String(p.ref || '').replace('refs/heads/', '');
+        await send(emb(`📤 Push ke ${repo} (${branch})`, commits.slice(0, 5).map(c => `• ${String(c.message).split('\n')[0].slice(0, 80)}`).join('\n'), 0x5865f2, p.compare));
       }
     } else if (event === 'issues') {
-      const issue = p.issue;
+      const issue = p.issue || {};
       if (p.action === 'opened') {
-        await sendToDiscord(new EmbedBuilder().setColor(0xFEE75C)
-          .setTitle(`🐛 Issue Dibuka: #${issue.number}`).setURL(issue.html_url)
-          .setDescription((issue.body || '').slice(0, 500)).setTimestamp());
+        await send(emb(`🐛 Issue Dibuka: #${issue.number}`, `**${issue.title}**\n\n${(issue.body || '').slice(0, 400)}`, 0xfee75c, issue.html_url));
       } else if (p.action === 'closed') {
-        await sendToDiscord(new EmbedBuilder().setColor(0x57F287)
-          .setTitle(`✅ Issue Ditutup: #${issue.number}`).setURL(issue.html_url)
-          .setDescription(`**${issue.title}**`).setTimestamp());
+        await send(emb(`✅ Issue Ditutup: #${issue.number}`, `**${issue.title}**`, 0x57f287, issue.html_url));
       }
     } else if (event === 'release') {
-      await sendToDiscord(new EmbedBuilder().setColor(0xF1C40F)
-        .setTitle(`🚀 Release: ${p.release.tag_name}`).setURL(p.release.html_url)
-        .setDescription((p.release.body || '').slice(0, 800)).setTimestamp());
+      await send(emb(`🚀 Release ${p.release?.tag_name}`, (p.release?.body || '').slice(0, 700), 0xf1c40f, p.release?.html_url));
     } else if (event === 'star') {
-      await sendToDiscord(new EmbedBuilder().setColor(0xF1C40F)
-        .setTitle(`⭐ ${repo} dapat star baru!`).setURL(p.repository.html_url)
-        .setDescription(`@${p.sender?.login} memberikan star`).setTimestamp());
+      await send(emb('⭐ Star Baru!', `**${repo}** dapat star dari @${p.sender?.login || '?'}`, 0xf1c40f, p.repository?.html_url));
     } else if (event === 'fork') {
-      await sendToDiscord(new EmbedBuilder().setColor(0x5865F2)
-        .setTitle(`🍴 ${repo} di-fork!`).setURL(p.forkee?.html_url || p.repository.html_url)
-        .setDescription(`Fork baru: **${p.forkee?.full_name}**`).setTimestamp());
+      await send(emb('🍴 Repo Di-fork!', `Fork baru: **${p.forkee?.full_name}**`, 0x5865f2, p.forkee?.html_url));
+    } else if (event === 'workflow_run') {
+      const w = p.workflow_run || {};
+      const okRun = w.conclusion === 'success';
+      await send(emb(`${okRun ? '✅' : '❌'} Workflow ${w.name}: ${w.conclusion || w.status}`, `Branch: \`${w.head_branch || '?'}\``, okRun ? 0x57f287 : 0xed4245, w.html_url));
     }
   } catch (e) {
-    console.error('[github-webhook]', e);
+    console.error('[github-webhook]', e.message);
   }
 
-  return res.json({ ok: true, event });
+  return res.status(200).json({ ok: true, event });
 };
