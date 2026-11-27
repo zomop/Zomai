@@ -60,16 +60,12 @@ for (const file of eventFiles) {
 client.on('error', err => console.error('[client error]', err));
 process.on('unhandledRejection', err => console.error('[unhandledRejection]', err));
 
-// Start GitHub webhook server bareng bot (opsional, aktif kalau GITHUB_CHANNEL_ID diisi)
-if (config.githubChannelId) {
-  try {
-    const { startWebhookServer } = require('./webhook/server');
-    startWebhookServer(client);
-  } catch (e) {
-    console.warn('⚠️ Webhook server tidak jalan:', e.message);
-  }
-} else {
-  console.log('ℹ️ GITHUB_CHANNEL_ID kosong — webhook GitHub nonaktif. Isi di .env untuk aktifkan sync GitHub.');
+// Start GitHub webhook server bareng bot (selalu aktif — channel diatur per-server via /setup-github)
+try {
+  const { startWebhookServer } = require('./webhook/server');
+  startWebhookServer(client);
+} catch (e) {
+  console.warn('⚠️ Webhook server tidak jalan:', e.message);
 }
 
 // Login

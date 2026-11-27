@@ -19,6 +19,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { EmbedBuilder } = require('discord.js');
 const config = require('../config');
+const githubChannels = require('../utils/github-channels');
 
 const app = express();
 
@@ -54,17 +55,38 @@ async function sendToDiscord(embed) {
 let discordClient = null;
 function setDiscordClient(client) { discordClient = client; }
 
-async function notifyDiscord(embed) {
-  if (discordClient && config.githubChannelId) {
-    try {
-      const channel = await discordClient.channels.fetch(config.githubChannelId);
-      if (channel?.isTextBased()) {
-        await channel.send({ embeds: [embed] });
-        return;
-      }
-    } catch (e) {
-      console.error('[webhook] gagal kirim ke Discord:', e.message);
+async function notifyDiscord(embed, repoFullName = '') {
+  // Multi-server: kirim ke semua channel yang terdaftar via /setup-github
+  // + channel default dari .env (kalau ada)
+  const targets = new Set();
+  if (config.githubChannelId) targets.add(config.githubChannelId);
+
+  try {
+    const all = githubChannels.getAllChannels();
+    for (const [guildId, cfg] of Object.entries(all)) {
+      // Kalau server ini filter repo tertentu, skip kalau repo tidak cocok
+      if (cfg.repo && repoFullName && cfg.repo !== repoFullName) continue;
+      if (cfg.channelId) targets.add(cfg.channelId);
     }
+  } catch {}
+
+  if (!targets.size) {
+    console.warn('⚠️ Belum ada channel tujuan. Admin server bisa atur dengan /setup-github #channel');
+    return;
+  }
+
+  if (discordClient) {
+    for (const channelId of targets) {
+      try {
+        const channel = await discordClient.channels.fetch(channelId);
+        if (channel?.isTextBased()) {
+          await channel.send({ embeds: [embed] });
+        }
+      } catch (e) {
+        console.error(`[webhook] gagal kirim ke channel ${channelId}:`, e.message);
+      }
+    }
+    return;
   }
   await sendToDiscord(embed);
 }
@@ -88,7 +110,7 @@ function handlePullRequest(payload) {
         { name: '🌿 Branch', value: `\`${pr.head.ref}\` → \`${pr.base.ref}\``, inline: true },
       )
       .setTimestamp();
-    return notifyDiscord(embed);
+    return notifyDiscord(embed, repo);
   }
 
   if (action === 'closed' && pr.merged) {
@@ -102,7 +124,7 @@ function handlePullRequest(payload) {
         { name: '👤 Author', value: `@${pr.user.login}`, inline: true },
       )
       .setTimestamp();
-    return notifyDiscord(embed);
+    return notifyDiscord(embed, repo);
   }
 
   if (action === 'closed' && !pr.merged) {
@@ -113,7 +135,7 @@ function handlePullRequest(payload) {
       .setDescription(`**${pr.title}**`)
       .addFields({ name: '📦 Repo', value: repo, inline: true })
       .setTimestamp();
-    return notifyDiscord(embed);
+    return notifyDiscord(embed, repo);
   }
 
   if (action === 'reopened') {
@@ -123,7 +145,7 @@ function handlePullRequest(payload) {
       .setURL(pr.html_url)
       .setDescription(`**${pr.title}**`)
       .setTimestamp();
-    return notifyDiscord(embed);
+    return notifyDiscord(embed, repo);
   }
 }
 
@@ -142,7 +164,7 @@ function handlePush(payload) {
     ).join('\n'))
     .setFooter({ text: `${commits.length} commit(s) • ${payload.pusher?.name || ''}` })
     .setTimestamp();
-  return notifyDiscord(embed);
+  return notifyDiscord(embed, repo);
 }
 
 function handleIssues(payload) {
@@ -162,7 +184,7 @@ function handleIssues(payload) {
         { name: '🏷️ Labels', value: issue.labels?.map(l => `\`${l.name}\``).join(' ') || '—', inline: true },
       )
       .setTimestamp();
-    return notifyDiscord(embed);
+    return notifyDiscord(embed, repo);
   }
 
   if (action === 'closed') {
@@ -172,7 +194,7 @@ function handleIssues(payload) {
       .setURL(issue.html_url)
       .setDescription(`**${issue.title}**`)
       .setTimestamp();
-    return notifyDiscord(embed);
+    return notifyDiscord(embed, repo);
   }
 }
 
@@ -186,7 +208,7 @@ function handleRelease(payload) {
     .setDescription(release.body?.slice(0, 800) || '_Tidak ada notes_')
     .addFields({ name: '📦 Repo', value: repo, inline: true })
     .setTimestamp();
-  return notifyDiscord(embed);
+  return notifyDiscord(embed, repo);
 }
 
 function handleStar(payload) {
@@ -198,7 +220,7 @@ function handleStar(payload) {
     .setURL(payload.repository.html_url)
     .setDescription(`@${user} memberikan star ke **${repo}**`)
     .setTimestamp();
-  return notifyDiscord(embed);
+  return notifyDiscord(embed, repo);
 }
 
 function handleFork(payload) {
@@ -210,7 +232,7 @@ function handleFork(payload) {
     .setURL(payload.forkee?.html_url || payload.repository.html_url)
     .setDescription(`Fork baru: **${forkee}**`)
     .setTimestamp();
-  return notifyDiscord(embed);
+  return notifyDiscord(embed, repo);
 }
 
 function handleWorkflowRun(payload) {
@@ -224,7 +246,7 @@ function handleWorkflowRun(payload) {
     .setDescription(`${status} — branch \`${run.head_branch}\``)
     .addFields({ name: '📦 Repo', value: repo, inline: true })
     .setTimestamp();
-  return notifyDiscord(embed);
+  return notifyDiscord(embed, repo);
 }
 
 // ===== Routes =====

@@ -1,6 +1,7 @@
 # 🤖 Zomai — Discord Bot
 
-Bot Discord multifungsi dengan fitur cek Roblox, sync GitHub real-time, moderasi, fun & utility.
+Bot Discord multifungsi: cek Roblox, cek GitHub, sync notifikasi GitHub, moderasi, fun & utility.
+**Bisa dipakai di semua server** — tinggal invite bot, semua command langsung bisa dipakai.
 
 ## ✨ Fitur
 
@@ -10,14 +11,18 @@ Bot Discord multifungsi dengan fitur cek Roblox, sync GitHub real-time, moderasi
 | `/roblox <username>` | Cek akun Roblox lengkap: avatar, join date, followers, status banned, online |
 | `/roblox-search <keyword>` | Cari user Roblox berdasarkan kata kunci |
 
-### 🐙 GitHub Sync
+### 🐙 GitHub (cek akun & repo langsung dari Discord)
 | Command | Deskripsi |
 |---|---|
+| `/github-check <username>` | **Cek akun GitHub** — info lengkap user + 5 repo terbaru |
 | `/github <owner/repo>` | Info repository (stars, forks, language, dll) |
 | `/github-user <username>` | Info user GitHub + repo terbaru |
 | `/github-pr <owner/repo>` | List Pull Request yang terbuka |
+| `/setup-github #channel` | Admin: atur channel notifikasi GitHub untuk server ini |
+| `/github-status` | Lihat status sync GitHub server ini |
+| `/github-disable` | Matikan notifikasi GitHub server ini |
 
-**Webhook otomatis** — bot kirim notifikasi ke channel Discord setiap ada:
+**Webhook otomatis** — bot kirim notifikasi ke channel yang sudah diatur setiap ada:
 - 🔀 PR dibuka / di-merge (accept) / ditutup / dibuka kembali
 - 📤 Push commit baru
 - 🐛 Issue dibuka / ditutup
@@ -37,7 +42,24 @@ Bot Discord multifungsi dengan fitur cek Roblox, sync GitHub real-time, moderasi
 
 ---
 
-## 🚀 Cara Setup (5 menit)
+## 💡 Soal "Channel" — penjelasan simpel
+
+**Channel** = tempat chat di Discord. Contoh: `#general`, `#pengumuman`, `#github-log`.
+
+Bot ini punya 2 cara kerja:
+
+1. **Command manual (tanpa channel)** — semua command seperti `/github-check torvalds` atau `/roblox builderman` bisa dipakai langsung di channel mana saja, di server mana saja. **Tidak butuh setting channel.**
+
+2. **Notifikasi otomatis (pakai channel)** — kalau mau bot *otomatis* kirim info setiap ada PR/push di GitHub, bot butuh tahu harus kirim ke channel mana. Caranya:
+   - Admin server ketik: `/setup-github #github-log`
+   - Selesai! Bot akan kirim notifikasi GitHub ke `#github-log` di server itu.
+   - Tiap server bisa pilih channel sendiri-sendiri. Bot tetap 1 bot untuk semua server.
+
+Jadi: **command = langsung pakai. Notifikasi otomatis = atur channel sekali pakai `/setup-github`.**
+
+---
+
+## 🚀 Cara Setup
 
 ### 1. Buat Discord Application & Bot
 
@@ -51,7 +73,6 @@ Bot Discord multifungsi dengan fitur cek Roblox, sync GitHub real-time, moderasi
    ```
    https://discord.com/oauth2/authorize?client_id=APPLICATION_ID&permissions=8&scope=bot%20applications.commands
    ```
-   Pilih permissions: Send Messages, Embed Links, Kick/Ban/Timeout, Manage Messages
 
 ### 2. Install & Konfigurasi
 
@@ -66,29 +87,23 @@ Edit `.env`:
 ```env
 DISCORD_TOKEN=token_bot_kamu
 CLIENT_ID=application_id_kamu
-GUILD_ID=           # opsional, isi ID server untuk dev cepat
+GUILD_ID=           # kosong = global (semua server), isi ID server = cepat muncul
 GITHUB_WEBHOOK_SECRET=secret_random
-GITHUB_CHANNEL_ID=id_channel_discord
 PORT=3000
 ```
-
-> **Cara dapat Channel ID:** Discord Settings → Advanced → aktifkan Developer Mode → klik kanan channel → Copy Channel ID
 
 ### 3. Deploy Commands & Jalankan
 
 ```bash
-npm run deploy   # daftarkan slash commands (sekali saja, ulangi kalau tambah command)
+npm run deploy   # daftarkan slash commands (sekali saja)
 npm start        # jalankan bot + webhook server
 ```
 
-Untuk development dengan auto-restart:
-```bash
-npm run dev
-```
+> ⚠️ `npm run deploy` dan `npm start` harus dijalankan dari komputer/server yang bisa akses internet ke `discord.com` (misal laptop kamu, bukan sandbox yang diblokir).
 
 ---
 
-## 🔗 Pasang GitHub Webhook
+## 🔗 Pasang GitHub Webhook (opsional, untuk notifikasi otomatis)
 
 1. Deploy bot ke server (Railway/Render/VPS) atau jalankan lokal dengan ngrok:
    ```bash
@@ -98,8 +113,9 @@ npm run dev
    - **Payload URL:** `https://domain-kamu.com/webhook/github`
    - **Content type:** `application/json`
    - **Secret:** sama persis dengan `GITHUB_WEBHOOK_SECRET` di `.env`
-   - **Events:** pilih *Pull requests, Pushes, Issues, Releases, Stars, Forks, Workflow runs* (atau *Send me everything*)
-3. Klik **Add webhook** → test dengan buat PR / push commit → notifikasi muncul di channel Discord 🎉
+   - **Events:** pilih *Pull requests, Pushes, Issues, Releases, Stars, Forks, Workflow runs*
+3. Di Discord, admin ketik `/setup-github #channel` untuk pilih channel tujuan.
+4. Test dengan buat PR / push commit → notifikasi muncul di channel 🎉
 
 ---
 
@@ -112,13 +128,10 @@ Zomai/
 │   ├── deploy-commands.js    # Deploy slash commands
 │   ├── config/               # Config dari .env
 │   ├── commands/             # Semua slash commands
-│   │   ├── roblox.js
-│   │   ├── github.js
-│   │   ├── moderation.js
-│   │   └── ...
 │   ├── events/               # Event handlers (ready, interaction)
 │   ├── utils/                # Helper Roblox API, GitHub API, embed
 │   └── webhook/              # GitHub webhook server (Express)
+├── data/                     # Channel GitHub per-server (otomatis dibuat)
 ├── .env.example
 └── package.json
 ```

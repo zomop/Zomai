@@ -11,7 +11,7 @@ module.exports = {
       .setDescription('Semua command pakai slash `/`')
       .addFields(
         { name: '🎮 Roblox', value: '`/roblox <username>` — cek akun lengkap\n`/roblox-search <keyword>` — cari user', inline: false },
-        { name: '🐙 GitHub', value: '`/github <owner/repo>` — info repo\n`/github-user <username>` — info user\n`/github-pr <owner/repo>` — PR terbuka', inline: false },
+        { name: '🐙 GitHub', value: '`/github-check <username>` — cek akun GitHub\n`/github <owner/repo>` — info repo\n`/github-user <username>` — info user\n`/github-pr <owner/repo>` — PR terbuka\n`/setup-github #channel` — atur channel notifikasi (admin)', inline: false },
         { name: '🛠️ Utility', value: '`/ping` `/avatar` `/serverinfo` `/userinfo` `/botinfo` `/invite`', inline: false },
         { name: '🎲 Fun', value: '`/8ball <pertanyaan>` `/coinflip` `/dice` `/meme`', inline: false },
         { name: '🛡️ Moderasi (butuh permission)', value: '`/kick` `/ban` `/timeout` `/clear` `/warn`', inline: false },
