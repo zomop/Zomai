@@ -53,21 +53,20 @@ Test: ketik `/ping` di Discord → bot balas Pong 🏓
 
 ---
 
-## Notifikasi GitHub otomatis
+## Notifikasi GitHub otomatis (tanpa redeploy)
 
-1. Di Discord, admin ketik `/setup-github #channel` → bot kasih instruksi
-2. Buka Vercel → project `zomai-bot` → **Settings → Environment Variables** → tambah:
-   - `GITHUB_CHANNEL_ID` = ID channel Discord tujuan
-   - `GITHUB_WEBHOOK_SECRET` = `zomaigh2026` (sudah terpasang)
-3. Redeploy: **Deployments → ⋯ → Redeploy**
-4. Di GitHub repo → **Settings → Webhooks → Add webhook**:
-   - Payload URL: `https://zomai-bot-andre-dev4.vercel.app/api/github-webhook`
-   - Content type: `application/json`
-   - Secret: `zomaigh2026`
-   - Events: Pull requests, Pushes, Issues, Releases, Stars, Forks, Workflow runs
-5. Selesai — PR di-merge, push commit, issue, release, star, fork semua masuk ke Discord 🎉
+1. Di Discord, admin ketik `/setup-github #channel`
+2. Bot langsung kasih **Payload URL** siap tempel, bentuknya:
+   `https://zomai-bot-andre-dev4.vercel.app/api/github-webhook?channel=<ID_CHANNEL>`
+   (bisa tambah `&repo=owner/nama` kalau cuma mau repo tertentu)
+3. Buka GitHub repo → **Settings → Webhooks → Add webhook**:
+   - **Payload URL:** tempel URL dari bot
+   - **Content type:** `application/json`
+   - **Secret:** `zomaigh2026`
+   - **Events:** Pull requests, Pushes, Issues, Releases, Stars, Forks, Workflow runs
+4. Simpan. GitHub akan kirim test ping → di Discord muncul "✅ Webhook Terhubung".
 
----
+Event yang masuk ke Discord: PR dibuka/di-merge/ditutup/reopen, push commit, issue buka/tutup, release, star, fork, workflow run.
 
 ## Catatan penting
 
