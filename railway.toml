@@ -1,0 +1,10 @@
+# Railway deploy config — bot jalan 24 jam
+# Cara pakai: buka railway.app → New Project → Deploy from GitHub repo → pilih repo ini
+# Lalu isi Variables: DISCORD_TOKEN, CLIENT_ID, PORT=3000
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
