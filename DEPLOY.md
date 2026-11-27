@@ -68,6 +68,37 @@ Test: ketik `/ping` di Discord → bot balas Pong 🏓
 
 Event yang masuk ke Discord: PR dibuka/di-merge/ditutup/reopen, push commit, issue buka/tutup, release, star, fork, workflow run.
 
+## Biar bot TAMPIL ONLINE (titik hijau) di Discord
+
+Mode Interactions bikin command jalan, tapi bot **tidak muncul online** karena tidak ada koneksi gateway.
+Supaya tampil online 24/7 **tanpa kartu kredit**, bot dijalankan di **GitHub Actions** (gratis untuk repo publik).
+
+### Cara aktifkan (sekali saja, dari HP)
+
+1. Buka **github.com/zomop/Zomai/settings/secrets/actions**
+2. Klik **New repository secret**, isi:
+   - Name: `DISCORD_TOKEN` → Secret: token bot kamu
+   - Klik **Add secret**
+3. Ulangi, tambah satu lagi:
+   - Name: `CLIENT_ID` → Secret: `1573709992291475497`
+4. Buka tab **Actions** → pilih **"Zomai — bot online 24/7"** → tombol **Run workflow** → **Run workflow**
+5. Tunggu ±1 menit → buka Discord, bot akan **tampil online** 🟢
+
+Setelah itu otomatis jalan terus (dijadwalkan tiap 10 menit, tiap job maksimal 5 jam 45 menit, lalu langsung nyambung lagi).
+Kalau bot crash, job berikutnya otomatis menyalakan ulang.
+
+### Catatan
+- Repo publik → menit Actions **gratis tanpa batas**. (Repo privat: kuota 2.000 menit/bulan.)
+- Workflow terjadwal bisa nonaktif sendiri kalau repo 60 hari tidak ada commit — cukup push sekali atau klik Run workflow lagi.
+- Bot tampil online dengan status **"Watching /help • Zomai Bot"**.
+- Slash command tetap dilayani Vercel (cepat, tanpa server).
+
+## Kenapa command tertentu masih "thinking" sebentar?
+
+- Command yang **tidak** memanggil API luar (`/ping`, `/help`, `/dice`, `/clear`, `/kick`, …) sekarang **balas instan** tanpa status thinking.
+- `/roblox`, `/github-check`, `/github-pr`, `/meme` perlu ambil data dari Roblox/GitHub (server mereka bisa 1–3 detik). Bot langsung kasih ACK supaya tidak "interaction failed", lalu hasilnya menyusul.
+- Region function sudah dipindah ke **Singapore (sin1)** supaya lebih dekat ke Indonesia.
+
 ## Catatan penting
 
 - **Bot tidak muncul "online"** di daftar member. Itu normal untuk mode Interactions; semua slash command tetap jalan.
