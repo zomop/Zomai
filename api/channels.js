@@ -49,8 +49,22 @@ async function handle(req, res) {
     return null;
   })();
 
+  // opsional: &logs=1 → tampilkan 3 pesan terakhir di channel auto (cek notifikasi masuk)
+  let recent = null;
+  if (url.searchParams.get('logs') === '1' && suggestion) {
+    const msgs = await get(`/channels/${suggestion.channel_id}/messages?limit=3`);
+    recent = (Array.isArray(msgs) ? msgs : []).map(m => ({
+      author: m.author?.username,
+      bot: m.author?.bot,
+      title: m.embeds?.[0]?.title || null,
+      content: (m.content || '').slice(0, 120),
+      at: m.timestamp,
+    }));
+  }
+
   return send(res, 200, {
     ok: true,
+    recent,
     total_guild: out.length,
     auto_channel: suggestion,
     note: suggestion
