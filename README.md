@@ -259,6 +259,36 @@ Nggak perlu setting webhook manual. Workflow `.github/workflows/github-to-discor
 - **Tiket**: klik **🎫 Buka Tiket** di `#buat-tiket` atau ketik `tiket` → bot bikin channel **privat** (`#tiket-username`) yang cuma bisa dilihat user + staff. Selesai? Klik **🔒 Tutup Tiket** / `tiket tutup`.
 - Semua tombol ditangani di Vercel (`/api/interactions`), jadi tetap jalan walau bot gateway sedang reconnect.
 
+## 🖼️ Kartu profil & banner animasi
+
+```
+profile            → kartu profil kamu (privat)
+kartu              → sama, alias
+banner             → galeri 8 banner + status
+banner galaxy      → pakai banner
+banner random      → acak dari yang kebuka
+banner beli gold   → beli banner VIP pakai koin
+banner <link gif>  → banner custom (gif/png/jpg/webp)
+banner off         → balik ke default
+```
+
+Kartu profil isinya: **banner GIF yang gerak**, avatar, level + XP bar, koin, peringkat server, badge otomatis, pekerjaan, streak, jumlah command/buruan/taruhan, dan kapan mulai main.
+
+| Banner | Syarat |
+|---|---|
+| 🌆 neon · 🌊 ocean · 🌸 sakura | gratis |
+| 🌌 galaxy | Level 3 |
+| 🔥 fire | Level 5 |
+| 🌠 aurora | Level 8 |
+| 🟩 matrix | Level 10 |
+| 👑 gold (VIP) | beli 5.000 🪙 |
+
+![preview banner](assets/banners/preview.png)
+
+- File GIF ada di `assets/banners/`, dibuat sendiri lewat `python3 tools/make-banners.py` (Python standar + ImageMagick).
+- Disajikan lewat CDN jsDelivr (`cdn.jsdelivr.net/gh/zomop/Zomai@main/assets/banners/*.gif`) supaya Discord bisa memutarnya. Mau CDN sendiri? Set `BANNER_CDN`.
+- Semua balasan **privat**: slash = ephemeral, chat biasa = pesan bot + pesan pemicu dihapus otomatis.
+
 ## 💰 Ekonomi & game ala owo
 
 | Command | Fungsi | Cooldown |
@@ -271,7 +301,8 @@ Nggak perlu setting webhook manual. Workflow `.github/workflows/github-to-discor
 | `bet <koin>` | Taruhan 48% menang | — |
 | `pay @user <koin>` / `tf` | Transfer koin | — |
 | `leaderboard` / `lb` | 10 terkaya di server | — |
-| `profile` / `profil` | Statistik lengkap | — |
+| `profile` / `profil` / `kartu` | **Kartu profil**: banner GIF animasi, level, badge, peringkat | — |
+| `banner [nama\|url\|off\|random]` | Ganti banner kartu profil (8 preset + custom) | — |
 | `slots <taruhan>` | Slot machine | — |
 | `rps batu\|gunting\|kertas [taruhan]` | Suit lawan bot | — |
 | `tiket [buka\|tutup]` | Buka/tutup tiket bantuan (channel privat) | — |
