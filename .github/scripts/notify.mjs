@@ -23,8 +23,23 @@ if (!TOKEN && !DRY) {
 
 const headers = { Authorization: `Bot ${TOKEN}`, 'User-Agent': 'ZomaiBot/1.0', 'Content-Type': 'application/json' };
 
-async function api(path, options = {}) {
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(path, options = {}, attempt = 0) {
   const res = await fetch(API + path, { ...options, headers: { ...headers, ...(options.headers || {}) } });
+
+  // rate limit → tunggu lalu coba lagi (maks 3x)
+  if (res.status === 429 && attempt < 3) {
+    const body = await res.json().catch(() => ({}));
+    const wait = Math.min(5000, Math.ceil((Number(body.retry_after) || 1) * 1000));
+    console.log(`⏳ Rate limit, tunggu ${wait}ms lalu coba lagi…`);
+    await sleep(wait);
+    return api(path, options, attempt + 1);
+  }
+  if (!res.ok && res.status >= 500 && attempt < 2) {
+    await sleep(800);
+    return api(path, options, attempt + 1);
+  }
   if (!res.ok) throw new Error(`Discord ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`);
   return res.status === 204 ? null : res.json();
 }
@@ -171,6 +186,7 @@ try {
   });
   console.log(`✅ Terkirim ke channel ${channelId}: ${embed.title}`);
 } catch (e) {
+  // jangan bikin workflow merah cuma gara-gara notifikasi gagal
   console.error('❌ Gagal kirim:', e.message);
-  process.exit(1);
+  process.exit(0);
 }
