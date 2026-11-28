@@ -1,19 +1,19 @@
 {
   "users": {
     "1447164217978261628_1378952029640065045": {
-      "coins": 630,
-      "xp": 99,
+      "coins": 1010,
+      "xp": 171,
       "level": 4,
       "job": "miner",
       "daily": 1795808690675,
-      "work": 1795832736922,
-      "hunt": 1795848679513,
+      "work": 1795850259482,
+      "hunt": 1795850263082,
       "streak": 1,
       "stats": {
         "gambled": 3019,
         "won": 0,
-        "hunted": 3,
-        "commands": 52
+        "hunted": 4,
+        "commands": 58
       },
       "createdAt": 1795808690675,
       "banner": "galaxy",
