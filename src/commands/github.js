@@ -35,7 +35,7 @@ async function userEmbed(username) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('github')
-    .setDescription('🐙 Info repository GitHub')
+    .setDescription('🐙 Info repo GitHub (owner/repo) atau profil user (username)')
     .addStringOption(opt => opt.setName('repo').setDescription('Username, atau owner/repo (contoh: zomop atau zomop/Zomai)').setRequired(true)),
   async execute(interaction) {
     await interaction.deferReply();
