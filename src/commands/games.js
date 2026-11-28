@@ -16,6 +16,33 @@ const TRIVIA_ATTEMPTS = 3;
 
 const SLOT = ['🍒', '🍋', '🍊', '🔔', '💎', '7️⃣'];
 
+// Angka dalam kata -> digit, biar "delapan" sama dengan "8"
+const NUM_WORDS = {
+  nol: '0', kosong: '0', satu: '1', dua: '2', tiga: '3', empat: '4', lima: '5',
+  enam: '6', tujuh: '7', delapan: '8', sembilan: '9', sepuluh: '10', sebelas: '11',
+  'dua belas': '12', 'dua puluh': '20', 'tiga puluh': '30', seratus: '100',
+};
+
+function normText(s) {
+  let t = ` ${String(s).toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim()} `;
+  t = t.replace(/\bdua belas\b/g, '12').replace(/\bdua puluh\b/g, '20').replace(/\btiga puluh\b/g, '30');
+  for (const [w, d] of Object.entries(NUM_WORDS)) t = t.replace(new RegExp(`\\b${w}\\b`, 'g'), d);
+  return t;
+}
+
+const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Cocokkan jawaban user dengan daftar jawaban benar */
+function isAnswer(text, answers) {
+  const t = normText(text);
+  return answers.some(a => {
+    const na = normText(a).trim();
+    if (!na) return false;
+        // jawaban pendek ("8", "12") harus cocok utuh; jawaban panjang boleh substring
+    return na.length <= 3 ? new RegExp(`(^|\\s)${esc(na)}($|\\s)`).test(t) : t.includes(na);
+  });
+}
+
 async function slots(i) {
   const bet = i.options.getInteger('taruhan') || 50;
   const u = eco.getUser(i.guild.id, i.user.id);
@@ -108,39 +135,73 @@ async function trivia(i) {
           `**${item.q}**\n\nJawab langsung di chat — hadiah **${TRIVIA_REWARD} 🪙**\n` +
             `⏳ Waktu 20 detik • maksimal **${TRIVIA_ATTEMPTS}** tebakan • 1x per 90 detik/orang`,
         )
-        .setFooter({ text: 'Jawaban salah memakai jatah tebakan' }),
+        .setFooter({ text: 'Salah satu tebakan langsung dibalas benar/salah' }),
     ],
   });
 
-  let winner = null;
-  try {
-    const collected = await i.channel.awaitMessages({
-      filter: m => !m.author.bot && m.content.trim().length > 0,
-      max: TRIVIA_ATTEMPTS,
-      time: 20000,
-    });
-    for (const msg of collected.values()) {
-      const text = msg.content.toLowerCase();
-      if (unique.some(ans => ans.length > 1 ? text.includes(ans) : new RegExp(`\\b${ans}\\b`).test(text))) {
-        winner = msg;
-        break;
-      }
-    }
-  } catch {
-    /* waktu habis */
-  } finally {
-    activeTrivia.delete(i.channel.id);
-  }
+  const channel = i.channel;
+  const guildId = i.guild.id;
+  const tries = new Map(); // userId -> jumlah salah (jatah per orang, bukan per channel)
+  let total = 0;           // batas pesan diproses, biar nggak bisa di-spam
+  let done = false;
 
-  if (winner) {
-    eco.addCoins(i.guild.id, winner.author.id, TRIVIA_REWARD);
-    return i.channel
-      .send({ embeds: [new EmbedBuilder().setColor(0x57f287).setDescription(`✅ <@${winner.author.id}> benar! Jawaban: **${unique[0]}** — dapat **${TRIVIA_REWARD} 🪙**`)] })
+  const collector = channel.createMessageCollector({
+    filter: m => !m.author.bot && m.content.trim().length > 0,
+    time: 20000,
+  });
+
+  const finish = embed => {
+    if (done) return;
+    done = true;
+    activeTrivia.delete(channel.id);
+    collector.stop('selesai');
+    channel.send({ embeds: [embed] }).catch(() => {});
+  };
+
+  // Balas tiap tebakan secara real-time (bukan nunggu 20 detik)
+  collector.on('collect', msg => {
+    if (done) return;
+    total += 1;
+    if (total > 8) return; // anti-spam: maksimal 8 tebakan per soal
+
+    if (isAnswer(msg.content, unique)) {
+      eco.addCoins(guildId, msg.author.id, TRIVIA_REWARD);
+      finish(
+        new EmbedBuilder()
+          .setColor(0x57f287)
+          .setDescription(`✅ <@${msg.author.id}> benar! Jawaban: **${unique[0]}** — dapat **${TRIVIA_REWARD} 🪙**`),
+      );
+      return;
+    }
+
+    const used = (tries.get(msg.author.id) || 0) + 1;
+    tries.set(msg.author.id, used);
+    const left = TRIVIA_ATTEMPTS - used;
+
+    msg.react('❌').catch(() => {});
+    channel
+      .send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(left > 0 ? 0xfee75c : 0xed4245)
+            .setDescription(
+              left > 0
+                ? `❌ <@${msg.author.id}> **salah**. Sisa tebakan kamu: **${left}**`
+                : `❌ <@${msg.author.id}> **salah**. Tebakan kamu habis, tunggu orang lain atau waktu selesai.`,
+            ),
+        ],
+      })
       .catch(() => {});
-  }
-  return i.channel
-    .send({ embeds: [new EmbedBuilder().setColor(0xed4245).setDescription(`⏰ Waktu habis / tebakan habis. Jawaban: **${unique[0]}**`)] })
-    .catch(() => {});
+  });
+
+  collector.on('end', () => {
+    activeTrivia.delete(channel.id);
+    if (done) return;
+    done = true;
+    channel
+      .send({ embeds: [new EmbedBuilder().setColor(0xed4245).setDescription(`⏰ Waktu habis. Jawaban: **${unique[0]}**`)] })
+      .catch(() => {});
+  });
 }
 
 function hash(str) {
@@ -174,7 +235,7 @@ module.exports = {
       .addStringOption(o => o.setName('pilihan').setDescription('batu / gunting / kertas').setRequired(true)
         .addChoices({ name: 'batu', value: 'batu' }, { name: 'gunting', value: 'gunting' }, { name: 'kertas', value: 'kertas' }))
       .addIntegerOption(o => o.setName('taruhan').setDescription('Taruhan koin (opsional)').setMinValue(10)),
-    new SlashCommandBuilder().setName('trivia').setDescription('🧠 Kuis kilat, jawab di chat, menang 300 koin'),
+    new SlashCommandBuilder().setName('trivia').setDescription('🧠 Kuis kilat, jawab di chat, menang 200 koin'),
     new SlashCommandBuilder().setName('ship').setDescription('💘 Hitung kecocokan kamu dengan seseorang')
       .addUserOption(o => o.setName('user').setDescription('Orang yang mau di-ship').setRequired(true)),
     new SlashCommandBuilder().setName('rate').setDescription('⭐ Kasih rating random')
