@@ -1,19 +1,19 @@
 {
   "users": {
     "1447164217978261628_1378952029640065045": {
-      "coins": 329,
-      "xp": 241,
-      "level": 3,
+      "coins": 630,
+      "xp": 51,
+      "level": 4,
       "job": "miner",
       "daily": 1795808690675,
       "work": 1795832736922,
-      "hunt": 1795848006799,
+      "hunt": 1795848679513,
       "streak": 1,
       "stats": {
         "gambled": 3019,
         "won": 0,
-        "hunted": 1,
-        "commands": 43
+        "hunted": 3,
+        "commands": 48
       },
       "createdAt": 1795808690675
     },
