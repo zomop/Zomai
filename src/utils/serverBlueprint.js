@@ -1,11 +1,11 @@
 /**
  * Blueprint server lengkap ala komunitas Zomai:
- * role pemisah (separator) + role staff + role biasa + kategori + channel + emoji kustom.
- * Dipakai oleh command owner: `zomai build`
+ * role pemisah + role staff + role biasa + role warna + kategori + channel + emoji + panel tiket/verifikasi.
+ * Dipakai: `zomai build` (owner server / founder bot).
  */
 'use strict';
 
-const { ChannelType, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { icon } = require('./png');
 
 const SEP = {
@@ -13,20 +13,14 @@ const SEP = {
   staff: '━━━━━━ 🛡️ STAFF TEAM ━━━━━━',
   special: '━━━━━━ ⭐ SPESIAL ━━━━━━',
   member: '━━━━━━ 👥 BIASA ━━━━━━',
+  color: '━━━━━━ 🎨 WARNA ━━━━━━',
 };
 
-// Urutan dari ATAS ke BAWAH
+// Urutan dari ATAS ke BAWAH — tiap role warnanya beda
 const ROLES = [
-  // 🔹 pemisah OWNER
   { name: SEP.owner, separator: true, color: 0x2b2d31 },
-  {
-    name: '👑 Owner',
-    color: 0xf1c40f,
-    hoist: true,
-    perms: ['Administrator'],
-  },
+  { name: '👑 Owner', color: 0xf1c40f, hoist: true, perms: ['Administrator'] },
 
-  // 🔹 pemisah STAFF TEAM
   { name: SEP.staff, separator: true, color: 0x2b2d31 },
   {
     name: '🔰 Admin',
@@ -34,44 +28,35 @@ const ROLES = [
     hoist: true,
     perms: ['ManageGuild', 'KickMembers', 'BanMembers', 'ModerateMembers', 'ManageMessages', 'ManageChannels', 'ManageRoles', 'ViewAuditLog', 'ManageWebhooks', 'MentionEveryone', 'ManageEvents'],
   },
-  {
-    name: '🛡️ Moderator',
-    color: 0x3498db,
-    hoist: true,
-    perms: ['KickMembers', 'BanMembers', 'ModerateMembers', 'ManageMessages', 'ViewAuditLog', 'MentionEveryone'],
-  },
-  {
-    name: '🔧 Helper',
-    color: 0x2ecc71,
-    hoist: true,
-    perms: ['ManageMessages', 'ViewAuditLog'],
-  },
-  {
-    name: '🎉 Event Host',
-    color: 0xe67e22,
-    hoist: true,
-    perms: ['MentionEveryone', 'ManageEvents'],
-  },
-  {
-    name: '🤖 Bot Dev',
-    color: 0x9b59b6,
-    hoist: false,
-    perms: ['ViewAuditLog', 'ManageWebhooks'],
-  },
+  { name: '🛡️ Moderator', color: 0x3498db, hoist: true, perms: ['KickMembers', 'BanMembers', 'ModerateMembers', 'ManageMessages', 'ViewAuditLog', 'MentionEveryone', 'ManageChannels'] },
+  { name: '🔧 Helper', color: 0x2ecc71, hoist: true, perms: ['ManageMessages', 'ViewAuditLog'] },
+  { name: '🎉 Event Host', color: 0xe67e22, hoist: true, perms: ['MentionEveryone', 'ManageEvents'] },
+  { name: '🤖 Bot Dev', color: 0x9b59b6, hoist: false, perms: ['ViewAuditLog', 'ManageWebhooks'] },
 
-  // 🔹 pemisah SPESIAL
   { name: SEP.special, separator: true, color: 0x2b2d31 },
   { name: '💎 VIP', color: 0x1abc9c, hoist: true, perms: [] },
   { name: '🚀 Booster', color: 0xeb459e, hoist: true, perms: [] },
+  { name: '🏆 Legend', color: 0xf39c12, hoist: true, perms: [] },
   { name: '🤝 Partner', color: 0xfee75c, hoist: false, perms: [] },
   { name: '🎨 Artist', color: 0xe91e63, hoist: false, perms: [] },
 
-  // 🔹 pemisah BIASA (member)
   { name: SEP.member, separator: true, color: 0x2b2d31 },
-  { name: '👤 Member', color: 0x95a5a6, hoist: true, perms: [] },
-  { name: '✅ Verified', color: 0x57f287, hoist: false, perms: [] },
-  { name: '🌱 Newbie', color: 0x99aab5, hoist: false, perms: [] },
+  { name: '👤 Member', color: 0x95a5a6, hoist: true, perms: [], auto: true },
+  { name: '✅ Verified', color: 0x57f287, hoist: true, perms: [] },
+  { name: '🔥 Aktif', color: 0xff7f50, hoist: false, perms: [] },
+  { name: '🌱 Newbie', color: 0x74b9ff, hoist: false, perms: [] },
+  { name: '💤 AFK', color: 0x636e72, hoist: false, perms: [] },
   { name: '🔇 Muted', color: 0x4b4b4b, hoist: false, perms: [], muted: true },
+
+  { name: SEP.color, separator: true, color: 0x2b2d31 },
+  { name: '🔴 Merah', color: 0xff3b30, hoist: false, perms: [], selfAssign: true },
+  { name: '🟠 Oranye', color: 0xff9500, hoist: false, perms: [], selfAssign: true },
+  { name: '🟡 Kuning', color: 0xffd60a, hoist: false, perms: [], selfAssign: true },
+  { name: '🟢 Hijau', color: 0x34c759, hoist: false, perms: [], selfAssign: true },
+  { name: '🔵 Biru', color: 0x0a84ff, hoist: false, perms: [], selfAssign: true },
+  { name: '🟣 Ungu', color: 0xbf5af2, hoist: false, perms: [], selfAssign: true },
+  { name: '🟤 Coklat', color: 0xa2845e, hoist: false, perms: [], selfAssign: true },
+  { name: '⚫ Hitam', color: 0x23272a, hoist: false, perms: [], selfAssign: true },
 ];
 
 const CATEGORIES = [
@@ -82,6 +67,7 @@ const CATEGORIES = [
       { name: 'announcements', topic: 'Pengumuman penting dari staff 📣', readOnly: true },
       { name: 'rules', topic: 'Aturan server — wajib dibaca 📜', readOnly: true },
       { name: 'faq', topic: 'Pertanyaan yang sering ditanya ❓', readOnly: true },
+      { name: 'verify', topic: 'Klik tombol ✅ Verifikasi biar dapat role Verified', readOnly: true },
     ],
   },
   {
@@ -91,6 +77,7 @@ const CATEGORIES = [
       { name: 'random', topic: 'Apa aja boleh 🎲' },
       { name: 'memes', topic: 'Meme receh harian 😂' },
       { name: 'media', topic: 'Foto, video, karya kamu 🎨' },
+      { name: 'saran', topic: 'Ide & saran buat server 💡' },
     ],
   },
   {
@@ -100,6 +87,13 @@ const CATEGORIES = [
       { name: 'roblox', topic: 'Cek akun Roblox: `roblox builderman` 🎮' },
       { name: 'github', topic: 'Cek GitHub: `gh zomop` • `github zomop/Zomai` 🐙' },
       { name: 'webhook', topic: 'Notifikasi GitHub otomatis (PR, push, issue) 🔔', readOnly: true },
+    ],
+  },
+  {
+    name: '🎫 TIKET & BANTUAN',
+    channels: [
+      { name: 'buat-tiket', topic: 'Klik tombol 🎫 Buka Tiket — bantuan dari staff', readOnly: true },
+      { name: 'ticket-log', topic: 'Catatan tiket yang dibuka/ditutup 📋', staffOnly: true },
     ],
   },
   {
@@ -133,9 +127,8 @@ const EMOJIS = [
 
 const permBits = names => (names || []).reduce((acc, n) => acc | (PermissionFlagsBits[n] ?? 0n), 0n);
 
-/** Cek role lama → dipakai supaya build bisa diulang tanpa dobel */
 const findRole = (guild, name) => guild.roles.cache.find(r => r.name === name);
-const findChannel = (guild, name) => guild.channels.cache.find(c => c.name === name);
+const roleIdWith = (guild, emojiOrName) => guild.roles.cache.find(r => r.name.includes(emojiOrName))?.id;
 
 async function createRoles(guild, log) {
   const made = [];
@@ -146,7 +139,7 @@ async function createRoles(guild, log) {
         name: def.name,
         color: def.color ?? 0x99aab5,
         hoist: Boolean(def.hoist),
-        mentionable: false,
+        mentionable: def.separator ? false : Boolean(def.hoist),
         permissions: def.separator ? [] : permBits(def.perms),
         reason: 'Zomai owner build: struktur role server',
       });
@@ -156,15 +149,10 @@ async function createRoles(guild, log) {
       log?.(`Role sudah ada: ${def.name}`);
     }
     def.__id = role.id;
-    def.__muted = Boolean(def.muted);
   }
 
-  // Urutkan role sesuai blueprint (atas ke bawah)
   try {
-    const positions = ROLES.filter(d => d.__id).map((d, idx) => ({
-      role: d.__id,
-      position: ROLES.length - idx,
-    }));
+    const positions = ROLES.filter(d => d.__id).map((d, idx) => ({ role: d.__id, position: ROLES.length - idx }));
     await guild.roles.setPositions(positions);
   } catch (e) {
     log?.(`Gagal atur urutan role: ${e.message}`);
@@ -172,12 +160,10 @@ async function createRoles(guild, log) {
   return made;
 }
 
-const roleIdByPrefix = (guild, prefix) => guild.roles.cache.find(r => r.name.includes(prefix))?.id;
-
 async function createChannels(guild, log) {
   const everyone = guild.roles.everyone;
-  const staffRoles = [roleIdByPrefix(guild, 'Admin'), roleIdByPrefix(guild, 'Moderator'), roleIdByPrefix(guild, 'Helper')].filter(Boolean);
-  const mutedId = roleIdByPrefix(guild, 'Muted');
+  const staffRoles = [roleIdWith(guild, 'Admin'), roleIdWith(guild, 'Moderator'), roleIdWith(guild, 'Helper')].filter(Boolean);
+  const mutedId = roleIdWith(guild, 'Muted');
   const made = [];
 
   for (const cat of CATEGORIES) {
@@ -202,7 +188,7 @@ async function createChannels(guild, log) {
       } else if (def.readOnly) {
         overwrites.push({ id: everyone.id, deny: isVoice ? [PermissionFlagsBits.Speak] : [PermissionFlagsBits.SendMessages, PermissionFlagsBits.CreatePublicThreads] });
         for (const name of ['Admin', 'Moderator', 'Helper']) {
-          const id = roleIdByPrefix(guild, name);
+          const id = roleIdWith(guild, name);
           if (id) overwrites.push({ id, allow: isVoice ? [PermissionFlagsBits.Speak] : [PermissionFlagsBits.SendMessages] });
         }
       }
@@ -243,26 +229,34 @@ async function createEmojis(guild, log) {
   return made;
 }
 
-/** Kirim pesan sambutan + aturan kalau channel-nya baru dibuat */
+const isEmpty = async channel => !(await channel.messages.fetch({ limit: 1 })).size;
+
+/** Pesan awal: sambutan, aturan, panel verifikasi, panel tiket */
 async function seedMessages(guild, log) {
   try {
-    const welcome = guild.channels.cache.find(c => c.name === 'welcome');
-    const rules = guild.channels.cache.find(c => c.name === 'rules');
-    if (welcome && !(await welcome.messages.fetch({ limit: 1 })).size) {
+    const c = name => guild.channels.cache.find(x => x.name === name);
+
+    const welcome = c('welcome');
+    if (welcome && (await isEmpty(welcome))) {
       const embed = new EmbedBuilder()
         .setColor(0x5865f2)
         .setTitle(`👋 Selamat datang di ${guild.name}!`)
         .setDescription(
-          'Bot **Zomai** siap dipakai di sini — tanpa perlu slash, cukup ketik:\n' +
-            '`help` • `daily` • `roblox builderman` • `gh zomop` • `trivia`\n\n' +
-            'Baca <#' + (rules?.id || '') + '> dulu ya, dan ambil role **👤 Member** di role list.',
+          'Kamu otomatis dapat role **👤 Member** begitu join 🎉\n\n' +
+            '**Langkah cepat:**\n' +
+            '1️⃣ Baca <#' + (c('rules')?.id || '') + '>\n' +
+            '2️⃣ Klik tombol di <#' + (c('verify')?.id || '') + '> buat dapat role **✅ Verified**\n' +
+            '3️⃣ Butuh bantuan? Buka tiket di <#' + (c('buat-tiket')?.id || '') + '>\n\n' +
+            '**Coba bot-nya** (tanpa slash): `help` • `daily` • `roblox builderman` • `gh zomop` • `trivia`',
         )
         .setFooter({ text: 'Zomai Bot • bisa dipakai di server mana saja, bahkan di DM' });
       if (guild.iconURL()) embed.setThumbnail(guild.iconURL());
       await welcome.send({ embeds: [embed] });
       log?.('Pesan sambutan dikirim ke #welcome');
     }
-    if (rules && !(await rules.messages.fetch({ limit: 1 })).size) {
+
+    const rules = c('rules');
+    if (rules && (await isEmpty(rules))) {
       await rules.send({
         embeds: [
           new EmbedBuilder()
@@ -277,21 +271,69 @@ async function seedMessages(guild, log) {
                 '**5.** Ikuti arahan staff. Keputusan staff bersifat final.',
               ].join('\n'),
             )
-            .setFooter({ text: 'Belum punya role? Ambil 👤 Member di role list.' }),
+            .setFooter({ text: 'Join = otomatis dapat role 👤 Member' }),
         ],
       });
       log?.('Aturan dikirim ke #rules');
+    }
+
+    const verify = c('verify');
+    if (verify && (await isEmpty(verify))) {
+      await verify.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x57f287)
+            .setTitle('✅ Verifikasi')
+            .setDescription('Klik tombol di bawah buat dapat role **✅ Verified**.\nCuma butuh 1 klik, nggak ada syarat ribet.'),
+        ],
+        components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('zomai_verify').setLabel('Verifikasi').setEmoji('✅').setStyle(ButtonStyle.Success))],
+      });
+      log?.('Panel verifikasi dikirim ke #verify');
+    }
+
+    const tiket = c('buat-tiket');
+    if (tiket && (await isEmpty(tiket))) {
+      await tiket.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x5865f2)
+            .setTitle('🎫 Butuh Bantuan?')
+            .setDescription(
+              'Klik tombol **Buka Tiket** di bawah.\n\n' +
+                'Bot akan bikin channel privat cuma buat kamu + staff, jadi **nggak kelihatan member lain**.\n' +
+                'Udah selesai? Klik **Tutup Tiket** di dalam channel tiket.',
+            )
+            .setFooter({ text: 'Jangan buka tiket buat hal yang bisa ditanya di #faq ya' }),
+        ],
+        components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('zomai_ticket').setLabel('Buka Tiket').setEmoji('🎫').setStyle(ButtonStyle.Primary))],
+      });
+      log?.('Panel tiket dikirim ke #buat-tiket');
+    }
+
+    const faq = c('faq');
+    if (faq && (await isEmpty(faq))) {
+      await faq.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x3498db)
+            .setTitle('❓ FAQ singkat')
+            .setDescription(
+              [
+                '**Gimana cara pakai bot?** Ketik `help` — semua command bisa tanpa slash.',
+                '**Kok nggak dapat role?** Join otomatis dapat 👤 Member. Verified lewat tombol di #verify.',
+                '**Mau lapor/ngobrol sama staff?** Buka tiket di #buat-tiket.',
+                '**Bot-nya bisa di DM?** Bisa, langsung chat bot-nya.',
+              ].join('\n'),
+            ),
+        ],
+      });
+      log?.('FAQ dikirim ke #faq');
     }
   } catch (e) {
     log?.(`Gagal kirim pesan awal: ${e.message}`);
   }
 }
 
-/**
- * Bangun / lengkapi server.
- * @param {import('discord.js').Guild} guild
- * @param {{ roles?: boolean, channels?: boolean, emojis?: boolean, messages?: boolean, log?: (s:string)=>void }} opts
- */
 async function buildServer(guild, opts = {}) {
   const log = opts.log;
   const result = { roles: [], channels: [], emojis: [] };
