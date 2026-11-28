@@ -6,6 +6,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const eco = require('../utils/economy');
 const { errorEmbed } = require('../utils/embed');
 const TRIVIA_BANK = require('../utils/triviaBank');
+const { scopeId } = require('../utils/scope');
 
 // Anti-exploit trivia
 const activeTrivia = new Map(); // channelId -> waktu mulai
@@ -45,7 +46,7 @@ function isAnswer(text, answers) {
 
 async function slots(i) {
   const bet = i.options.getInteger('taruhan') || 50;
-  const u = eco.getUser(i.guild.id, i.user.id);
+  const u = eco.getUser(scopeId(i), i.user.id);
   if (bet < 10) return i.reply({ embeds: [errorEmbed('Minimal taruhan **10** koin.')] });
   if (u.coins < bet) return i.reply({ embeds: [errorEmbed(`Koin kurang. Saldo: ${eco.coins(u.coins)}`)] });
 
@@ -63,10 +64,10 @@ async function slots(i) {
   }
 
   const delta = Math.round(bet * multiplier) - bet;
-  eco.addCoins(i.guild.id, i.user.id, delta);
+  eco.addCoins(scopeId(i), i.user.id, delta);
   u.stats.gambled = (u.stats.gambled || 0) + bet;
   eco.store.touch();
-  const after = eco.getUser(i.guild.id, i.user.id);
+  const after = eco.getUser(scopeId(i), i.user.id);
 
   return i.reply({
     embeds: [
@@ -89,7 +90,7 @@ async function rps(i) {
   if (!me) return i.reply({ embeds: [errorEmbed('Pilih: `batu`, `gunting`, atau `kertas`.\nContoh: `rps batu 50`')] });
 
   const bet = i.options.getInteger('taruhan') || 0;
-  const u = eco.getUser(i.guild.id, i.user.id);
+  const u = eco.getUser(scopeId(i), i.user.id);
   if (bet > 0 && u.coins < bet) return i.reply({ embeds: [errorEmbed(`Koin kurang. Saldo: ${eco.coins(u.coins)}`)] });
 
   const bot = Object.keys(RPS)[Math.floor(Math.random() * 3)];
@@ -97,7 +98,7 @@ async function rps(i) {
   const win = BEAT[me] === bot;
   let delta = 0;
   if (bet > 0) delta = draw ? 0 : win ? bet : -bet;
-  if (delta) eco.addCoins(i.guild.id, i.user.id, delta);
+  if (delta) eco.addCoins(scopeId(i), i.user.id, delta);
 
   return i.reply({
     embeds: [
@@ -140,7 +141,7 @@ async function trivia(i) {
   });
 
   const channel = i.channel;
-  const guildId = i.guild.id;
+  const guildId = scopeId(i);
   const tries = new Map(); // userId -> jumlah salah (jatah per orang, bukan per channel)
   let total = 0;           // batas pesan diproses, biar nggak bisa di-spam
   let done = false;
@@ -242,7 +243,6 @@ module.exports = {
       .addUserOption(o => o.setName('user').setDescription('User (default: kamu)')),
   ],
   async execute(i) {
-    if (!i.guild) return i.reply({ embeds: [errorEmbed('Command ini cuma bisa dipakai di server.')] });
     const map = { slots, rps, trivia, ship, rate };
     return map[i.commandName](i);
   },

@@ -39,6 +39,9 @@ const warn = new SlashCommandBuilder()
 module.exports = {
   data: [kick, ban, timeout, clear, warn],
   async execute(interaction) {
+    if (!interaction.guild) {
+      return interaction.reply({ embeds: [errorEmbed('Command moderasi cuma bisa dipakai di server. Di DM nggak ada member yang bisa di-moderasi 🙂')] , ephemeral: true });
+    }
     const cmd = interaction.commandName;
 
     if (cmd === 'kick') {

@@ -6,6 +6,7 @@ module.exports = {
     .setDescription('ℹ️ Info server ini'),
   async execute(interaction) {
     const guild = interaction.guild;
+    if (!guild) return interaction.reply({ content: 'ℹ️ Command ini cuma bisa dipakai di server. Coba `userinfo` kalau di DM.', ephemeral: true });
     await guild.members.fetch();
     const embed = new EmbedBuilder()
       .setColor(0x5865F2)

@@ -178,6 +178,53 @@ rps batu 50
 
 Slash command tetap jalan semua (`/roblox`, `/daily`, …).
 
+## 🌍 Bisa dipakai siapa saja, di server mana saja, dan lewat DM
+
+- **Server mana pun**: tinggal invite bot-nya (`invite`), semua command langsung jalan. Tiap server punya data ekonomi sendiri (saldo, level, leaderboard terpisah).
+- **DM / chat pribadi**: kirim pesan langsung ke bot, contoh `help`, `daily`, `roblox builderman`, `gh zomop`. Saldo DM disimpan terpisah dari saldo server.
+- Command yang **wajib di server**: `serverinfo`, `setup-github`, `github-status`, `github-disable`, dan moderasi (`kick`, `ban`, `timeout`, `clear`, `warn`) — semuanya ngasih pesan jelas kalau dipanggil dari DM.
+
+## 🔒 Command owner (tersembunyi)
+
+Cuma muncul buat **pemilik bot** — terdeteksi otomatis dari pemilik aplikasi Discord (env `OWNER_IDS` bisa dipakai buat nambah). Orang lain ngetik `zomai` nggak dibalas apa-apa, dan command ini juga **nggak muncul di `help`** maupun daftar slash.
+
+| Command | Fungsi |
+|---|---|
+| `zomai` / `zomai panel` | Panel owner |
+| `zomai build` | Bangun server lengkap: 18 role + **4 role pemisah** + 5 kategori + 19 channel + 6 emoji kustom |
+| `zomai roles` | Cuma role (staff, spesial, member + pemisah) |
+| `zomai channels` | Cuma kategori & channel (termasuk pesan sambutan + aturan) |
+| `zomai emoji` | Cuma emoji kustom (`:zomai_coin:` `:zomai_heart:` `:zomai_star:` `:zomai_shield:` `:zomai_crown:` `:zomai_check:`) |
+| `zomai say <pesan>` | Kirim pengumuman ke channel sekarang |
+| `zomai stats` | Jumlah server, user, ping, uptime, jumlah akun ekonomi |
+| `zomai whoami` | Lihat ID kamu + owner terdaftar |
+| `zomai claim <kode>` | Darurat: klaim akses owner kalau deteksi otomatis gagal (`OWNER_SECRET`, default `SETUP_SECRET`) |
+
+**Struktur role yang dibangun (`zomai build`)** — dari atas ke bawah:
+
+```
+━━━━━━ 👑 OWNER ━━━━━━          ← role pemisah
+👑 Owner
+━━━━━━ 🛡️ STAFF TEAM ━━━━━━     ← role pemisah
+🔰 Admin
+🛡️ Moderator
+🔧 Helper
+🎉 Event Host
+🤖 Bot Dev
+━━━━━━ ⭐ SPESIAL ━━━━━━        ← role pemisah
+💎 VIP
+🚀 Booster
+🤝 Partner
+🎨 Artist
+━━━━━━ 👥 BIASA ━━━━━━          ← role pemisah
+👤 Member
+✅ Verified
+🌱 Newbie
+🔇 Muted
+```
+
+Build-nya **idempotent** — dijalankan berkali-kali nggak bikin dobel.
+
 ## 💰 Ekonomi & game ala owo
 
 | Command | Fungsi | Cooldown |

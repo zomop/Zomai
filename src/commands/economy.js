@@ -8,7 +8,7 @@ const { errorEmbed } = require('../utils/embed');
 
 const C = 0x2ecc71;
 
-const needGuild = i => !i.guild;
+const { scopeId } = require('../utils/scope');
 
 function userRow(id, u) {
   return `**#${id}** <@${u.id}> — ${eco.coins(u.coins)} • Lv.${u.level}`;
@@ -16,7 +16,7 @@ function userRow(id, u) {
 
 async function balance(i) {
   const target = i.options.getUser('user') || i.user;
-  const u = eco.getUser(i.guild.id, target.id);
+  const u = eco.getUser(scopeId(i), target.id);
   const job = u.job && eco.JOBS[u.job] ? eco.JOBS[u.job].label : '_Belum kerja_';
   const embed = new EmbedBuilder()
     .setColor(C)
@@ -34,7 +34,7 @@ async function balance(i) {
 }
 
 async function daily(i) {
-  const u = eco.getUser(i.guild.id, i.user.id);
+  const u = eco.getUser(scopeId(i), i.user.id);
   const left = eco.cooldownLeft(u.daily, 24 * 3600 * 1000);
   if (left > 0) return i.reply({ embeds: [errorEmbed(`Kamu sudah ambil daily. Coba lagi dalam **${eco.fmtDuration(left)}**.`)] });
 
@@ -42,7 +42,7 @@ async function daily(i) {
   u.streak = yesterday ? (u.streak || 0) + 1 : 1;
   u.daily = Date.now();
   const reward = Math.min(2000, 500 + (u.streak - 1) * 150);
-  eco.addCoins(i.guild.id, i.user.id, reward);
+  eco.addCoins(scopeId(i), i.user.id, reward);
 
   return i.reply({
     embeds: [
@@ -57,7 +57,7 @@ async function daily(i) {
 }
 
 async function work(i) {
-  const u = eco.getUser(i.guild.id, i.user.id);
+  const u = eco.getUser(scopeId(i), i.user.id);
   const left = eco.cooldownLeft(u.work, 45 * 60 * 1000);
   if (left > 0) return i.reply({ embeds: [errorEmbed(`Kamu masih capek 😴 Coba lagi dalam **${eco.fmtDuration(left)}**.`)] });
 
@@ -68,7 +68,7 @@ async function work(i) {
   const job = eco.JOBS[u.job];
   const pay = Math.floor(Math.random() * (job.max - job.min + 1)) + job.min;
   u.work = Date.now();
-  eco.addCoins(i.guild.id, i.user.id, pay);
+  eco.addCoins(scopeId(i), i.user.id, pay);
 
   const flavor = [
     'Kamu menyelesaikan pekerjaan dengan rapi.',
@@ -91,7 +91,7 @@ async function work(i) {
 
 async function job(i) {
   const pick = (i.options.getString('nama') || '').toLowerCase();
-  const u = eco.getUser(i.guild.id, i.user.id);
+  const u = eco.getUser(scopeId(i), i.user.id);
 
   if (!pick) {
     const list = Object.entries(eco.JOBS)
@@ -115,7 +115,7 @@ async function job(i) {
 }
 
 async function hunt(i) {
-  const u = eco.getUser(i.guild.id, i.user.id);
+  const u = eco.getUser(scopeId(i), i.user.id);
   const left = eco.cooldownLeft(u.hunt, 30 * 1000);
   if (left > 0) return i.reply({ embeds: [errorEmbed(`Hutan masih sepi... tunggu **${eco.fmtDuration(left)}**.`)] });
 
@@ -129,7 +129,7 @@ async function hunt(i) {
   const reward = Math.floor(Math.random() * (got.max - got.min + 1)) + got.min;
   u.hunt = Date.now();
   u.stats.hunted = (u.stats.hunted || 0) + 1;
-  eco.addCoins(i.guild.id, i.user.id, reward);
+  eco.addCoins(scopeId(i), i.user.id, reward);
 
   const rare = got.name.includes('Naga');
   return i.reply({
@@ -145,7 +145,7 @@ async function hunt(i) {
 }
 
 async function bet(i) {
-  const u = eco.getUser(i.guild.id, i.user.id);
+  const u = eco.getUser(scopeId(i), i.user.id);
   const amount = i.options.getInteger('jumlah') || 100;
   if (amount < 10) return i.reply({ embeds: [errorEmbed('Minimal taruhan **10** koin.')] });
   if (u.coins < amount) return i.reply({ embeds: [errorEmbed(`Koin kamu kurang. Saldo: ${eco.coins(u.coins)}`)] });
@@ -154,11 +154,11 @@ async function bet(i) {
   const win = Math.random() < 0.48;
   if (win) {
     u.stats.won = (u.stats.won || 0) + amount;
-    eco.addCoins(i.guild.id, i.user.id, amount);
+    eco.addCoins(scopeId(i), i.user.id, amount);
   } else {
-    eco.addCoins(i.guild.id, i.user.id, -amount);
+    eco.addCoins(scopeId(i), i.user.id, -amount);
   }
-  const now = eco.getUser(i.guild.id, i.user.id);
+  const now = eco.getUser(scopeId(i), i.user.id);
   return i.reply({
     embeds: [
       new EmbedBuilder()
@@ -178,16 +178,16 @@ async function pay(i) {
   if (target.bot) return i.reply({ embeds: [errorEmbed('Gak bisa transfer ke bot.')] });
   if (!amount || amount < 1) return i.reply({ embeds: [errorEmbed('Jumlahnya harus lebih dari 0.')] });
 
-  const me = eco.getUser(i.guild.id, i.user.id);
+  const me = eco.getUser(scopeId(i), i.user.id);
   if (me.coins < amount) return i.reply({ embeds: [errorEmbed(`Koin kamu kurang. Saldo: ${eco.coins(me.coins)}`)] });
 
-  eco.addCoins(i.guild.id, i.user.id, -amount);
-  eco.addCoins(i.guild.id, target.id, amount);
+  eco.addCoins(scopeId(i), i.user.id, -amount);
+  eco.addCoins(scopeId(i), target.id, amount);
   return i.reply({ embeds: [new EmbedBuilder().setColor(C).setTitle('💸 Transfer Berhasil').setDescription(`<@${i.user.id}> → <@${target.id}>\nJumlah: **${eco.coins(amount)}**`)] });
 }
 
 async function leaderboard(i) {
-  const rows = eco.top(i.guild.id, 10);
+  const rows = eco.top(scopeId(i), 10);
   if (!rows.length) return i.reply({ embeds: [errorEmbed('Belum ada data. Ketik `daily` untuk mulai!')] });
   const medals = ['🥇', '🥈', '🥉'];
   const desc = rows.map((u, idx) => `${medals[idx] || `**${idx + 1}.**`} <@${u.id}> — ${eco.coins(u.coins)} • Lv.${u.level}`).join('\n');
@@ -196,7 +196,7 @@ async function leaderboard(i) {
 
 async function profile(i) {
   const target = i.options.getUser('user') || i.user;
-  const u = eco.getUser(i.guild.id, target.id);
+  const u = eco.getUser(scopeId(i), target.id);
   const embed = new EmbedBuilder()
     .setColor(C)
     .setAuthor({ name: `Profil ${target.username}`, iconURL: target.displayAvatarURL() })
@@ -228,12 +228,11 @@ module.exports = {
     new SlashCommandBuilder().setName('pay').setDescription('💸 Kirim koin ke user lain')
       .addUserOption(o => o.setName('user').setDescription('Penerima').setRequired(true))
       .addIntegerOption(o => o.setName('jumlah').setDescription('Jumlah koin').setRequired(true).setMinValue(1)),
-    new SlashCommandBuilder().setName('leaderboard').setDescription('🏆 10 orang terkaya di server ini'),
+    new SlashCommandBuilder().setName('leaderboard').setDescription('🏆 10 orang terkaya'),
     new SlashCommandBuilder().setName('profile').setDescription('📊 Profil ekonomi user')
       .addUserOption(o => o.setName('user').setDescription('User (default: kamu)')),
   ],
   async execute(i) {
-    if (needGuild(i)) return i.reply({ embeds: [errorEmbed('Command ini cuma bisa dipakai di server.')] });
     const map = { balance, daily, work, job, hunt, bet, pay, leaderboard, profile };
     return map[i.commandName](i);
   },

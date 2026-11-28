@@ -11,6 +11,7 @@ const { Events } = require('discord.js');
 const { createAdapter } = require('../utils/textAdapter');
 const { errorEmbed } = require('../utils/embed');
 const economy = require('../utils/economy');
+const { scopeId } = require('../utils/scope');
 
 const PREFIXES = (process.env.PREFIX || '.')
   .split(',')
@@ -49,6 +50,12 @@ const ALIASES = {
   p: 'ping',
   bantuan: 'help',
   menu: 'help',
+  // hidden / owner
+  zomai: 'owner',
+  owner: 'owner',
+  'setup-server': 'owner',
+  buildserver: 'owner',
+  buatserver: 'owner',
 };
 
 module.exports = {
@@ -83,8 +90,8 @@ module.exports = {
 
     // XP tiap pakai command
     try {
-      if (message.guild) {
-        const res = economy.addXp(message.guild.id, message.author.id, 12);
+      {
+        const res = economy.addXp(scopeId({ guild: message.guild }), message.author.id, 12);
         if (res.leveled) {
           message.channel
             .send(`🎉 <@${message.author.id}> naik ke **Level ${res.level}**!`)

@@ -19,9 +19,11 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.DirectMessageTyping,
     GatewayIntentBits.MessageContent,
   ],
-  partials: [Partials.Message, Partials.Channel],
+  partials: [Partials.Message, Partials.Channel, Partials.User],
 });
 
 client.commands = new Collection();
@@ -68,8 +70,9 @@ try {
   console.warn('⚠️ Webhook server tidak jalan:', e.message);
 }
 
-// Muat data ekonomi (awet via GitHub Actions / file lokal)
+// Muat data ekonomi + owner (awet via GitHub Actions / file lokal)
 const economy = require('./utils/economy');
+const owner = require('./utils/owner');
 
 async function start() {
   try {
@@ -77,6 +80,11 @@ async function start() {
     console.log('💰 Data ekonomi siap');
   } catch (e) {
     console.warn('⚠️ Data ekonomi gagal dimuat:', e.message);
+  }
+  try {
+    await owner.init();
+  } catch (e) {
+    console.warn('⚠️ Data owner gagal dimuat:', e.message);
   }
   await client.login(config.token);
 }

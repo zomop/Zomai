@@ -26,6 +26,9 @@ module.exports = {
   data: [setup, status, disable],
   async execute(interaction) {
     const cmd = interaction.commandName;
+    if (!interaction.guildId) {
+      return interaction.reply({ embeds: [errorEmbed('Command ini cuma bisa dipakai di server, karena notifikasi GitHub dikirim ke channel server.')], ephemeral: true });
+    }
 
     if (cmd === 'setup-github') {
       const channel = interaction.options.getChannel('channel');

@@ -18,7 +18,8 @@ async function main() {
 
   const commands = [];
   const commandsPath = path.join(__dirname, 'commands');
-  const files = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'));
+  // owner.js sengaja nggak didaftarkan — hidden command (cuma bisa lewat chat biasa)
+  const files = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js') && f !== 'owner.js');
 
   for (const file of files) {
     const filePath = path.join(commandsPath, file);

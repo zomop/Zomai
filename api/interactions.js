@@ -70,6 +70,7 @@ function verifySignature(publicKeyHex, timestamp, raw, signatureHex) {
 async function api(path, options = {}) {
   const res = await fetch(API + path, {
     ...options,
+    signal: options.signal || AbortSignal.timeout(3000),
     headers: {
       Authorization: 'Bot ' + TOKEN,
       'Content-Type': 'application/json',
@@ -176,8 +177,8 @@ async function hPing() {
 }
 
 async function hRoblox(it) {
-  const username = opt(it.data, 'username');
-  const found = await rbxUserByName(username);
+  const username = String(opt(it.data, 'username') || '').trim();
+  const found = /^\d{1,20}$/.test(username) ? { id: username } : await rbxUserByName(username);
   if (!found) return errEmb(`User **${username}** tidak ditemukan di Roblox.`);
   const d = await rbxUserById(found.id);
   if (!d) return errEmb('Gagal mengambil detail user dari Roblox.');
@@ -209,9 +210,12 @@ async function hRobloxSearch(it) {
 
 async function hGithubCheck(it) {
   const username = String(opt(it.data, 'username') || '').trim().replace(/^@/, '');
-  const u = await ghFetch(`/users/${username}`);
+  const [u, reposRaw] = await Promise.all([
+    ghFetch(`/users/${username}`),
+    ghFetch(`/users/${username}/repos?per_page=5&sort=updated`).catch(() => []),
+  ]);
   if (!u) return errEmb(`Akun GitHub **${username}** tidak ditemukan.`);
-  const repos = (await ghFetch(`/users/${u.login}/repos?per_page=5&sort=updated`)) || [];
+  const repos = Array.isArray(reposRaw) ? reposRaw : [];
   const e = emb(`🐙 ${u.name || u.login}`, u.bio || '_Tidak ada bio_', 0x24292e);
   e.url = u.html_url;
   if (u.avatar_url) e.thumbnail = { url: u.avatar_url };
@@ -282,6 +286,7 @@ async function hAvatar(it) {
 }
 
 async function hServerInfo(it) {
+  if (!it.guild_id) return errEmb('Command ini cuma bisa dipakai di server. Kalau di DM, coba `userinfo`.');
   const g = await api(`/guilds/${it.guild_id}?with_counts=true`);
   const e = emb(`ℹ️ ${g.name}`, null);
   if (g.icon) e.thumbnail = { url: `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` };
@@ -442,8 +447,15 @@ async function hGithubDisable() {
 
 // ---------- fallback: game tanpa ekonomi (dipakai kalau bot gateway sedang mati) ----------
 
-function hNoEconomy() {
-  return emb('💰 Fitur ekonomi sedang tidak tersedia', 'Bot sedang menyambung ulang. Coba lagi 1-2 menit lagi ya.', 0xfee75c);
+function hNoEconomy(it) {
+  const name = it?.data?.name || 'daily';
+  return emb(
+    '💰 Command ekonomi jalan tanpa slash',
+    `Ketik langsung di chat (tanpa \`/\`):\n\n\`${name}\`\n\n` +
+      'Alasannya: saldo, level, dan cooldown disimpan oleh bot online, sedangkan slash lewat server Vercel yang nggak punya data itu.\n' +
+      'Semua command lain (roblox, github, mod, fun) tetap bisa pakai slash.',
+    0xfee75c,
+  );
 }
 
 const SLOT_ICONS = ['🍒', '🍋', '🍊', '🔔', '💎', '7️⃣'];
@@ -491,6 +503,7 @@ async function hRate(it) {
 // ==================== router ====================
 
 const HANDLERS = {
+  owner: () => errEmb('🔒 Command owner cuma bisa lewat chat biasa, dan cuma buat pemilik bot.'),
   ping: hPing,
   roblox: hRoblox,
   'roblox-search': hRobloxSearch,
