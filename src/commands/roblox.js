@@ -2,6 +2,9 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { getUserByUsername, getUserById } = require('../utils/roblox');
 const { errorEmbed } = require('../utils/embed');
 
+/** Angka atau "—" kalau data tidak tersedia dari Roblox */
+const fmt = n => (typeof n === 'number' ? n.toLocaleString('id-ID') : '—');
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('roblox')
@@ -35,9 +38,9 @@ module.exports = {
           { name: '🆔 User ID', value: `\`${detail.id}\``, inline: true },
           { name: '📅 Dibuat', value: `<t:${Math.floor(createdDate.getTime()/1000)}:D> (${accountAgeDays} hari)`, inline: true },
           { name: '🚫 Status', value: detail.isBanned ? '⛔ Banned' : '✅ Aktif', inline: true },
-          { name: '👥 Followers', value: `${detail.followers.toLocaleString()}`, inline: true },
-          { name: '➡️ Followings', value: `${detail.followings.toLocaleString()}`, inline: true },
-          { name: '🤝 Friends', value: `${detail.friends.toLocaleString()}`, inline: true },
+          { name: '👥 Followers', value: fmt(detail.followers), inline: true },
+          { name: '➡️ Followings', value: fmt(detail.followings), inline: true },
+          { name: '🤝 Friends', value: fmt(detail.friends), inline: true },
           { name: '🟢 Online?', value: detail.isOnline ? `Ya${detail.lastLocation ? ` di **${detail.lastLocation}**` : ''}` : 'Tidak', inline: true },
         )
         .setFooter({ text: 'Data dari Roblox API • Zomai Bot' })

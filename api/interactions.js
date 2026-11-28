@@ -98,12 +98,14 @@ const addFields = (e, fields) => {
 const opt = (data, name) => (data.options || []).find(o => o.name === name)?.value;
 const unix = d => Math.floor(new Date(d).getTime() / 1000);
 const num = n => Number(n || 0).toLocaleString('id-ID');
+const fmtCount = n => (typeof n === 'number' ? n.toLocaleString('id-ID') : '—');
 
 // ==================== Roblox / GitHub API ====================
 
 async function jsonFetch(url, options = {}) {
   const res = await fetch(url, {
     ...options,
+    signal: options.signal || AbortSignal.timeout(options.timeout || 2500),
     headers: { 'Content-Type': 'application/json', 'User-Agent': 'ZomaiBot/1.0', ...(options.headers || {}) },
   });
   if (!res.ok) {
@@ -125,12 +127,15 @@ async function rbxUserByName(username) {
 async function rbxUserById(id) {
   const u = await jsonFetch(`${RBX}/users/${id}`);
   if (!u) return null;
-  const [counts, presence, thumb] = await Promise.allSettled([
-    jsonFetch(`${RBX}/users/${id}/followers/counts`),
+  const num = v => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  const [fol, fing, fr, presence, thumb] = await Promise.allSettled([
+    jsonFetch(`https://friends.roblox.com/v1/users/${id}/followers/count`),
+    jsonFetch(`https://friends.roblox.com/v1/users/${id}/followings/count`),
+    jsonFetch(`https://friends.roblox.com/v1/users/${id}/friends/count`),
     jsonFetch(`${RBX}/users/${id}/presence`),
     jsonFetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${id}&size=420x420&format=Png`),
   ]);
-  const c = counts.status === 'fulfilled' && counts.value ? counts.value : {};
+  const cnt = r => (r.status === 'fulfilled' && typeof r.value?.count === 'number' ? r.value.count : null);
   const p = presence.status === 'fulfilled' && presence.value ? presence.value.userPresence || {} : {};
   const img = thumb.status === 'fulfilled' && thumb.value ? thumb.value.data?.[0]?.imageUrl : null;
   return {
@@ -140,9 +145,9 @@ async function rbxUserById(id) {
     created: u.created,
     description: u.description || '',
     isBanned: !!u.isBanned,
-    followers: c.followersCount || 0,
-    followings: c.followingsCount || 0,
-    friends: c.friendsCount || 0,
+    followers: cnt(fol),
+    followings: cnt(fing),
+    friends: cnt(fr),
     isOnline: !!p.isOnline,
     lastLocation: p.lastLocation || null,
     avatarUrl: img,
@@ -184,9 +189,9 @@ async function hRoblox(it) {
     { name: '🆔 User ID', value: '`' + d.id + '`', inline: true },
     { name: '📅 Dibuat', value: `<t:${unix(d.created)}:D> (${num(age)} hari)`, inline: true },
     { name: '🚫 Status', value: d.isBanned ? '⛔ Banned' : '✅ Aktif', inline: true },
-    { name: '👥 Followers', value: num(d.followers), inline: true },
-    { name: '➡️ Following', value: num(d.followings), inline: true },
-    { name: '🤝 Friends', value: num(d.friends), inline: true },
+    { name: '👥 Followers', value: fmtCount(d.followers), inline: true },
+    { name: '➡️ Following', value: fmtCount(d.followings), inline: true },
+    { name: '🤝 Friends', value: fmtCount(d.friends), inline: true },
     { name: '🟢 Online', value: d.isOnline ? 'Ya' + (d.lastLocation ? ` • ${d.lastLocation}` : '') : 'Tidak', inline: true },
   ]);
 }

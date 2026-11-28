@@ -53,6 +53,25 @@ async function _getUserByUsername(username) {
 }
 
 /**
+ * Ambil jumlah followers/followings/friends.
+ * Endpoint agregat users.roblox.com/v1/users/{id}/followers/counts sudah 404,
+ * jadi pakai friends.roblox.com/v1/users/{id}/{followers|followings|friends}/count → { count }.
+ * Mengembalikan null kalau memang tidak ada data (biar UI bisa tampilkan "—").
+ */
+async function getCounts(userId) {
+  const [fol, fing, fr] = await Promise.allSettled([
+    fetchJSON(`https://friends.roblox.com/v1/users/${userId}/followers/count`, { timeout: 2000 }),
+    fetchJSON(`https://friends.roblox.com/v1/users/${userId}/followings/count`, { timeout: 2000 }),
+    fetchJSON(`https://friends.roblox.com/v1/users/${userId}/friends/count`, { timeout: 2000 }),
+  ]);
+
+  const num = v => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  const val = r => (r.status === 'fulfilled' ? num(r.value?.count) : null);
+
+  return { followers: val(fol), followings: val(fing), friends: val(fr) };
+}
+
+/**
  * Ambil detail lengkap user by ID
  */
 async function getUserById(userId) {
@@ -63,7 +82,7 @@ async function _getUserById(userId) {
   // Semua request dijalankan PARALEL (sebelumnya thumbnail 2x jalan berurutan → lambat)
   const [user, counts, presence, bust, head] = await Promise.allSettled([
     fetchJSON(`${ROBLOX_API}/users/${userId}`, { timeout: 2500 }),
-    fetchJSON(`${ROBLOX_API}/users/${userId}/followers/counts`, { timeout: 2500 }),
+    getCounts(userId),
     fetchJSON(`${ROBLOX_API}/users/${userId}/presence`, { timeout: 1200 }),
     fetchJSON(`${THUMB_API}/users/avatar-headshot?userIds=${userId}&size=420x420&format=Png`, { timeout: 2000 }),
     fetchJSON(`${THUMB_API}/users/avatar-bust?userIds=${userId}&size=150x150&format=Png`, { timeout: 1500 }),
@@ -72,7 +91,7 @@ async function _getUserById(userId) {
   const userData = user.status === 'fulfilled' ? user.value : null;
   if (!userData) return null;
 
-  const countsData = counts.status === 'fulfilled' ? counts.value : {};
+  const countsData = counts.status === 'fulfilled' && counts.value ? counts.value : { followers: null, followings: null, friends: null };
   const presenceData = presence.status === 'fulfilled' ? presence.value : {};
   const avatarUrl = head.status === 'fulfilled' ? head.value.data?.[0]?.imageUrl || null : null;
   const headshotUrl = avatarUrl || (bust.status === 'fulfilled' ? bust.value.data?.[0]?.imageUrl || null : null);
@@ -87,9 +106,9 @@ async function _getUserById(userId) {
     created: userData.created,
     description: userData.description || '',
     isBanned: userData.isBanned || false,
-    followers: countsData.followersCount ?? 0,
-    followings: countsData.followingsCount ?? 0,
-    friends: countsData.friendsCount ?? 0,
+    followers: countsData.followers ?? null,
+    followings: countsData.followings ?? null,
+    friends: countsData.friends ?? null,
     avatarUrl,
     headshotUrl,
     isOnline,
@@ -125,4 +144,4 @@ async function checkUsernameAvailability(username) {
   }
 }
 
-module.exports = { getUserByUsername, getUserById, searchUsers, checkUsernameAvailability };
+module.exports = { getUserByUsername, getUserById, searchUsers, checkUsernameAvailability, getCounts };
