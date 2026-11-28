@@ -13,7 +13,8 @@ module.exports = {
       .setDescription(
         `Bisa pakai **slash** (\`/roblox\`) **atau tanpa slash** cukup ketik nama command-nya.\n` +
           `Contoh: \`roblox builderman\` • \`${p}roblox builderman\` • \`rbx builderman\` — semuanya jalan.\n\n` +
-          `📍 Bisa dipakai di **server mana saja** dan juga **lewat DM bot** (chat pribadi). Di DM, ekonomi punya saldo sendiri.`,
+          `📍 Bisa dipakai di **server mana saja** dan juga **lewat DM bot** (chat pribadi). Di DM, ekonomi punya saldo sendiri.\n\n` +
+          `🛠️ Punya server sendiri? Owner server bisa ketik \`zomai\` buat bangun server lengkap (role, channel, tiket, verifikasi).`,
       )
       .addFields(
         { name: '🎮 Roblox', value: '`roblox <username>` / `rbx <username>`\n`roblox-search <keyword>`', inline: false },
@@ -21,6 +22,7 @@ module.exports = {
         { name: '💰 Ekonomi (ala owo)', value: '`balance` — saldo & level\n`daily` — hadiah harian + streak\n`work` — kerja dapet koin (45 menit)\n`job [nama]` — pilih pekerjaan\n`hunt` — berburu hewan (30 detik)\n`bet <koin>` — taruhan 48%\n`pay @user <koin>` / `tf` — transfer\n`profile` `leaderboard` / `lb`', inline: false },
         { name: '🎮 Mini games', value: '`slots <taruhan>`\n`rps batu|gunting|kertas [taruhan]`\n`trivia` — jawab di chat, menang 200 koin\n`ship @user` `rate @user`\n`8ball` `coinflip` `dice` `meme`', inline: false },
         { name: '🛠️ Utility', value: '`ping` `avatar` `serverinfo` `userinfo` `botinfo` `invite`', inline: false },
+        { name: '🎫 Bantuan & verifikasi', value: '`tiket` — buka channel privat dengan staff\n`tiket tutup` — tutup tiket\n`verify` — ambil role ✅ Verified (atau klik tombol di #verify)', inline: false },
         { name: '🛡️ Moderasi', value: '`kick` `ban` `timeout` `clear` `warn` (butuh permission, khusus server)', inline: false },
       )
       .setFooter({ text: `Prefix default: ${p} • Zomai Bot v2.0` })

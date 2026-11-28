@@ -186,12 +186,24 @@ Slash command tetap jalan semua (`/roblox`, `/daily`, …).
 
 ## 🔒 Command owner (tersembunyi)
 
-Cuma muncul buat **pemilik bot** — terdeteksi otomatis dari pemilik aplikasi Discord (env `OWNER_IDS` bisa dipakai buat nambah). Orang lain ngetik `zomai` nggak dibalas apa-apa, dan command ini juga **nggak muncul di `help`** maupun daftar slash.
+Ada **2 tingkat akses**:
+
+| Tingkat | Siapa | Boleh apa |
+|---|---|---|
+| 👑 **Founder bot** | pemilik aplikasi Discord (otomatis) / `OWNER_IDS` | **akses tertinggi**: semua aksi, di server mana pun & DM, termasuk `stats`/`claim` |
+| 🛡️ **Owner server** | pemilik server / yang punya Administrator | bangun server-nya sendiri (`build`, `roles`, `channels`, `emoji`, `say`, `tiket`) |
+
+Orang lain ngetik `zomai` → **nggak dibalas apa-apa**, dan command ini **nggak muncul di `help`** maupun daftar slash.
+
+**Balasannya privat** — cuma kelihatan 1 orang biar nggak ganggu chat orang lain:
+- lewat slash → *ephemeral* (cuma kamu yang lihat)
+- lewat chat biasa → balasan **otomatis dihapus 30 detik**, pesan pemicunya juga dihapus
+- `zomai dm` → panel dikirim ke DM kamu, di channel nggak ada jejak
 
 | Command | Fungsi |
 |---|---|
 | `zomai` / `zomai panel` | Panel owner |
-| `zomai build` | Bangun server lengkap: 18 role + **4 role pemisah** + 5 kategori + 19 channel + 6 emoji kustom |
+| `zomai build` | Bangun server lengkap: 30 role + **5 role pemisah** + 6 kategori + 23 channel + 6 emoji + panel tiket & verifikasi |
 | `zomai roles` | Cuma role (staff, spesial, member + pemisah) |
 | `zomai channels` | Cuma kategori & channel (termasuk pesan sambutan + aturan) |
 | `zomai emoji` | Cuma emoji kustom (`:zomai_coin:` `:zomai_heart:` `:zomai_star:` `:zomai_shield:` `:zomai_crown:` `:zomai_check:`) |
@@ -200,30 +212,29 @@ Cuma muncul buat **pemilik bot** — terdeteksi otomatis dari pemilik aplikasi D
 | `zomai whoami` | Lihat ID kamu + owner terdaftar |
 | `zomai claim <kode>` | Darurat: klaim akses owner kalau deteksi otomatis gagal (`OWNER_SECRET`, default `SETUP_SECRET`) |
 
-**Struktur role yang dibangun (`zomai build`)** — dari atas ke bawah:
+**Struktur role yang dibangun (`zomai build`)** — dari atas ke bawah, tiap role warnanya beda:
 
 ```
-━━━━━━ 👑 OWNER ━━━━━━          ← role pemisah
+━━━━━━ 👑 OWNER ━━━━━━            ← role pemisah
 👑 Owner
-━━━━━━ 🛡️ STAFF TEAM ━━━━━━     ← role pemisah
-🔰 Admin
-🛡️ Moderator
-🔧 Helper
-🎉 Event Host
-🤖 Bot Dev
-━━━━━━ ⭐ SPESIAL ━━━━━━        ← role pemisah
-💎 VIP
-🚀 Booster
-🤝 Partner
-🎨 Artist
-━━━━━━ 👥 BIASA ━━━━━━          ← role pemisah
-👤 Member
-✅ Verified
-🌱 Newbie
-🔇 Muted
+━━━━━━ 🛡️ STAFF TEAM ━━━━━━       ← role pemisah
+🔰 Admin • 🛡️ Moderator • 🔧 Helper • 🎉 Event Host • 🤖 Bot Dev
+━━━━━━ ⭐ SPESIAL ━━━━━━          ← role pemisah
+💎 VIP • 🚀 Booster • 🏆 Legend • 🤝 Partner • 🎨 Artist
+━━━━━━ 👥 BIASA ━━━━━━            ← role pemisah
+👤 Member • ✅ Verified • 🔥 Aktif • 🌱 Newbie • 💤 AFK • 🔇 Muted
+━━━━━━ 🎨 WARNA ━━━━━━            ← role pemisah
+🔴 Merah • 🟠 Oranye • 🟡 Kuning • 🟢 Hijau • 🔵 Biru • 🟣 Ungu • 🟤 Coklat • ⚫ Hitam
 ```
 
 Build-nya **idempotent** — dijalankan berkali-kali nggak bikin dobel.
+
+## 🎫 Tiket & ✅ Verifikasi
+
+- **Auto-role**: siapa pun yang join otomatis dapat **👤 Member** (event `guildMemberAdd`).
+- **Verifikasi**: klik tombol di `#verify` atau ketik `verify` → dapat **✅ Verified**.
+- **Tiket**: klik **🎫 Buka Tiket** di `#buat-tiket` atau ketik `tiket` → bot bikin channel **privat** (`#tiket-username`) yang cuma bisa dilihat user + staff. Selesai? Klik **🔒 Tutup Tiket** / `tiket tutup`.
+- Semua tombol ditangani di Vercel (`/api/interactions`), jadi tetap jalan walau bot gateway sedang reconnect.
 
 ## 💰 Ekonomi & game ala owo
 
@@ -240,6 +251,8 @@ Build-nya **idempotent** — dijalankan berkali-kali nggak bikin dobel.
 | `profile` / `profil` | Statistik lengkap | — |
 | `slots <taruhan>` | Slot machine | — |
 | `rps batu\|gunting\|kertas [taruhan]` | Suit lawan bot | — |
+| `tiket [buka\|tutup]` | Buka/tutup tiket bantuan (channel privat) | — |
+| `verify` | Ambil role ✅ Verified | — |
 | `trivia` | Kuis (85+ soal), jawab di chat — **langsung dibalas benar/salah**, menang 200 koin, 3 tebakan/orang | 90 detik/orang |
 | `ship @user` / `rate @user` | Fun | — |
 

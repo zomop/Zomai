@@ -50,6 +50,10 @@ const ALIASES = {
   p: 'ping',
   bantuan: 'help',
   menu: 'help',
+  ticket: 'tiket',
+  tiket: 'tiket',
+  verif: 'verify',
+  verifikasi: 'verify',
   // hidden / owner
   zomai: 'owner',
   owner: 'owner',

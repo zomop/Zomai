@@ -500,6 +500,41 @@ async function hRate(it) {
   return emb('⭐ Rating', `**${score}/100**`, 0xf1c40f);
 }
 
+
+// ---------- /verify & /tiket ----------
+async function hVerify(it) {
+  if (!it.guild_id) return errEmb('Verifikasi cuma bisa di server, bukan di DM.');
+  const userId = it.member?.user?.id || it.user?.id;
+  const role = await findRoleByName(it.guild_id, 'Verified');
+  if (!role) return errEmb('Role **✅ Verified** belum ada di server ini. Owner server bisa jalankan `zomai build` dulu.');
+  const r = await fetch(`${API}/guilds/${it.guild_id}/members/${userId}/roles/${role.id}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bot ${TOKEN}`, 'User-Agent': 'ZomaiBot/1.0', 'X-Audit-Log-Reason': 'Verifikasi via /verify' },
+  }).catch(() => null);
+  if (r && (r.ok || r.status === 204)) return emb('✅ Terverifikasi!', `Kamu sekarang punya role **${role.name}**.`, 0x57f287);
+  const detail = r ? (await r.text().catch(() => '')).slice(0, 150) : 'gagal konek';
+  return errEmb(`Gagal kasih role (pastikan role bot di atas role Verified).\n\`${detail}\``);
+}
+
+async function hTicket(it) {
+  if (!it.guild_id) return errEmb('Tiket cuma bisa dibuka di server.');
+  const aksi = String(opt(it.data, 'aksi') || 'buka').toLowerCase();
+  if (['tutup', 'close', 'selesai'].includes(aksi)) {
+    return errEmb('Buat menutup tiket, klik tombol **Tutup Tiket** di channel tiket, atau ketik `tiket tutup` di sana.');
+  }
+  const user = it.member?.user || it.user;
+  try {
+    const { channel, existing } = await createTicketChannel(it.guild_id, user);
+    return emb(
+      existing ? '🎫 Tiket kamu sudah ada' : '🎫 Tiket dibuka',
+      existing ? `Channel tiket kamu: <#${channel.id}>` : `Channel privat kamu: <#${channel.id}>\nCuma kamu + staff yang bisa lihat.`,
+      existing ? 0xfee75c : 0x57f287,
+    );
+  } catch (e) {
+    return errEmb(e.message);
+  }
+}
+
 // ==================== router ====================
 
 const HANDLERS = {
@@ -510,6 +545,8 @@ const HANDLERS = {
   'github-check': hGithubCheck,
   'github-user': hGithubCheck,
   github: hGithubRepo,
+  verify: hVerify,
+  tiket: hTicket,
   'github-pr': hGithubPR,
   avatar: hAvatar,
   serverinfo: hServerInfo,
@@ -551,7 +588,7 @@ const HANDLERS = {
 const INSTANT = new Set([
   'ping', 'help', '8ball', 'coinflip', 'dice', 'github-status', 'github-disable',
   'setup-github', 'warn', 'avatar', 'serverinfo', 'userinfo', 'botinfo', 'invite',
-  'kick', 'ban', 'timeout', 'clear',
+  'kick', 'ban', 'timeout', 'clear', 'verify', 'tiket',
 ]);
 
 const PERM_CHECKS = {
@@ -569,12 +606,161 @@ function reply(res, embed, ephemeral) {
 }
 
 async function editOriginal(token, embed) {
+  return patchOriginal(token, { embeds: [embed] });
+}
+
+async function patchOriginal(token, data) {
   const r = await fetch(`${API}/webhooks/${CLIENT_ID}/${token}/messages/@original`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ embeds: [embed] }),
+    body: JSON.stringify(data),
   });
-  if (!r.ok) console.error('[zomai] editOriginal', r.status, (await r.text().catch(() => '')).slice(0, 200));
+  if (!r.ok) console.error('[zomai] patchOriginal', r.status, (await r.text().catch(() => '')).slice(0, 200));
+}
+
+
+// ==================== tombol (message components) ====================
+
+const compReply = (res, content) =>
+  send(res, 200, { type: TYPE_MESSAGE, data: { content, flags: FLAG_EPHEMERAL } });
+
+const findRoleByName = async (guildId, part) => {
+  const roles = await api(`/guilds/${guildId}/roles`).catch(() => []);
+  return (Array.isArray(roles) ? roles : []).find(r => r.name.includes(part)) || null;
+};
+
+async function cVerify(it, res) {
+  const guildId = it.guild_id;
+  const userId = it.member?.user?.id || it.user?.id;
+  compReply(res, '⏳ Sebentar, memverifikasi…');
+
+  const role = await findRoleByName(guildId, 'Verified');
+  if (!role) return patchOriginal(it.token, { content: '❌ Role **✅ Verified** belum ada di server ini. Minta owner server jalankan `zomai build` dulu.' });
+
+  const r = await fetch(`${API}/guilds/${guildId}/members/${userId}/roles/${role.id}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bot ${TOKEN}`, 'User-Agent': 'ZomaiBot/1.0', 'X-Audit-Log-Reason': 'Verifikasi lewat tombol' },
+  }).catch(() => null);
+
+  if (r && (r.ok || r.status === 204)) {
+    return patchOriginal(it.token, { content: `✅ Terverifikasi! Kamu sekarang punya role **${role.name}**. Selamat bergabung 🎉` });
+  }
+  const detail = r ? (await r.text().catch(() => '')).slice(0, 150) : 'gagal konek';
+  return patchOriginal(it.token, { content: `❌ Gagal kasih role (pastikan role bot di atas role Verified).\n\`${detail}\`` });
+}
+
+async function createTicketChannel(guildId, user) {
+  const allChannels = await api(`/guilds/${guildId}/channels`).catch(() => []);
+  const channels = Array.isArray(allChannels) ? allChannels : [];
+  const name = `tiket-${String(user.username || 'user').toLowerCase()}`.slice(0, 90);
+
+  const existing = channels.find(c => c.name === name && c.type === 0);
+  if (existing) return { channel: existing, existing: true };
+
+  const roles = await api(`/guilds/${guildId}/roles`).catch(() => []);
+  const roleList = Array.isArray(roles) ? roles : [];
+  const staff = roleList.filter(r => /Admin|Moderator|Helper/.test(r.name)).map(r => r.id);
+  const everyone = roleList.find(r => r.name === '@everyone');
+  const category = channels.find(c => c.type === 4 && c.name.includes('TIKET'));
+
+  // bit: ViewChannel 1024 • SendMessages 2048 • ManageMessages 8192 • AttachFiles 32768 • ReadMessageHistory 65536 • AddReactions 64 • ManageChannels 16
+  const USER_ALLOW = 1024 + 2048 + 65536 + 32768 + 64;
+  const STAFF_ALLOW = 1024 + 2048 + 8192 + 65536;
+  const BOT_ALLOW = 1024 + 2048 + 8192 + 65536 + 16;
+
+  const overwrites = [
+    { id: everyone?.id || guildId, type: 0, deny: '1024' },
+    { id: user.id, type: 1, allow: String(USER_ALLOW) },
+    { id: CLIENT_ID, type: 1, allow: String(BOT_ALLOW) },
+  ];
+  for (const id of staff) overwrites.push({ id, type: 0, allow: String(STAFF_ALLOW) });
+
+  const created = await api(`/guilds/${guildId}/channels`, {
+    method: 'POST',
+    body: JSON.stringify({
+      name,
+      type: 0,
+      parent_id: category?.id || null,
+      topic: `Tiket ${user.username} • dibuka lewat Zomai`,
+      permission_overwrites: overwrites,
+    }),
+  }).catch(() => null);
+
+  if (!created?.id) throw new Error('Gagal bikin channel tiket. Pastikan bot punya permission **Manage Channels**.');
+
+  await api(`/channels/${created.id}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({
+      content: `<@${user.id}>${staff.length ? ' ' + staff.map(id => `<@&${id}>`).join(' ') : ''}`,
+      embeds: [
+        {
+          color: 0x5865f2,
+          title: '🎫 Tiket Dibuka',
+          description:
+            `Halo <@${user.id}>! Staff bakal bantu sebentar lagi.\n\n` +
+            '**Tulis masalah/kebutuhanmu di sini** — jelaskan sedetail mungkin ya.\n' +
+            'Channel ini **privat**: cuma kamu + staff yang bisa lihat.',
+          footer: { text: 'Zomai Ticket System' },
+          timestamp: new Date().toISOString(),
+        },
+      ],
+      components: [{ type: 1, components: [{ type: 2, style: 4, label: 'Tutup Tiket', emoji: { name: '🔒' }, custom_id: 'zomai_ticket_close' }] }],
+    }),
+  }).catch(() => {});
+
+  return { channel: created, existing: false };
+}
+
+async function cTicketOpen(it, res) {
+  const user = it.member?.user || it.user;
+  compReply(res, '⏳ Membuat channel tiket…');
+  try {
+    const { channel, existing } = await createTicketChannel(it.guild_id, user);
+    return patchOriginal(it.token, {
+      content: existing ? `🎫 Kamu sudah punya tiket: <#${channel.id}>` : `🎫 Tiket kamu sudah dibuka: <#${channel.id}>\nCuma kamu + staff yang bisa lihat channel itu.`,
+    });
+  } catch (e) {
+    return patchOriginal(it.token, { content: `❌ ${e.message}` });
+  }
+}
+
+async function cTicketClose(it, res) {
+  const channelId = it.channel_id;
+  const user = it.member?.user || it.user;
+  compReply(res, '🔒 Menutup tiket…');
+
+  // catat ke #ticket-log kalau ada
+  try {
+    const channels = await api(`/guilds/${it.guild_id}/channels`).catch(() => []);
+    const logCh = (Array.isArray(channels) ? channels : []).find(c => c.name === 'ticket-log');
+    if (logCh) {
+      await api(`/channels/${logCh.id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ content: `🔒 Tiket <#${channelId}> ditutup oleh <@${user.id}>.` }),
+      }).catch(() => {});
+    }
+  } catch {}
+
+  await fetch(`${API}/channels/${channelId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bot ${TOKEN}`, 'User-Agent': 'ZomaiBot/1.0', 'X-Audit-Log-Reason': 'Tiket ditutup' },
+  }).catch(() => {});
+}
+
+async function handleComponent(it, res) {
+  const id = it.data?.custom_id || '';
+  if (!it.guild_id) return compReply(res, 'Tombol ini cuma bisa dipakai di server.');
+
+  try {
+    if (id === 'zomai_verify') return await cVerify(it, res);
+    if (id === 'zomai_ticket') return await cTicketOpen(it, res);
+    if (id === 'zomai_ticket_close') return await cTicketClose(it, res);
+    return compReply(res, 'Tombol ini sudah nggak dipakai.');
+  } catch (e) {
+    console.error('[zomai] component', id, e.message);
+    if (!res.headersSent) return compReply(res, `❌ Error: ${e.message}`);
+    return patchOriginal(it.token, { content: `❌ Error: ${e.message}` }).catch(() => {});
+  }
 }
 
 async function handle(req, res) {
@@ -608,6 +794,7 @@ async function handle(req, res) {
   }
 
   if (it.type === 1) return send(res, 200, { type: TYPE_PONG });
+  if (it.type === 3) return handleComponent(it, res);
   if (it.type !== 2) return send(res, 400, { error: 'Unsupported interaction type' });
 
   const name = it.data?.name;
