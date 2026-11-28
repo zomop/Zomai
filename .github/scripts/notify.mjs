@@ -44,24 +44,30 @@ async function api(path, options = {}, attempt = 0) {
   return res.status === 204 ? null : res.json();
 }
 
-/** Cari channel staff-log di semua server bot */
-async function detectChannel() {
-  if (/^\d{15,25}$/.test(process.env.DISCORD_CHANNEL_ID || '')) return process.env.DISCORD_CHANNEL_ID;
-  const guilds = await api('/users/@me/guilds');
-  for (const g of guilds || []) {
+/** Cari channel staff-log di SEMUA server bot (biar semua server dapat notifikasi) */
+async function detectChannels() {
+  const explicit = process.env.DISCORD_CHANNEL_ID || '';
+  if (/^\d{15,25}$/.test(explicit)) return [explicit];
+
+  const found = [];
+  const guilds = (await api('/users/@me/guilds')) || [];
+  for (const g of guilds) {
     let channels = [];
     try {
       channels = await api(`/guilds/${g.id}/channels`);
     } catch {
       continue;
     }
-    const texts = channels.filter(c => c.type === 0);
+    const texts = (Array.isArray(channels) ? channels : []).filter(c => c.type === 0);
     for (const name of PREFERRED) {
-      const found = texts.find(c => c.name === name);
-      if (found) return found.id;
+      const hit = texts.find(c => c.name === name);
+      if (hit) {
+        found.push(hit.id);
+        break; // 1 channel per server
+      }
     }
   }
-  return null;
+  return [...new Set(found)];
 }
 
 // ---------- payload ----------
@@ -175,16 +181,18 @@ if (DRY) {
 }
 
 try {
-  const channelId = await detectChannel();
-  if (!channelId) {
+  const channels = await detectChannels();
+  if (!channels.length) {
     console.log('⚠️ Channel staff-log nggak ketemu. Bikin channel bernama "staff-log" atau isi env DISCORD_CHANNEL_ID.');
     process.exit(0);
   }
-  await api(`/channels/${channelId}/messages`, {
-    method: 'POST',
-    body: JSON.stringify({ embeds: [embed], allowed_mentions: { parse: [] } }),
-  });
-  console.log(`✅ Terkirim ke channel ${channelId}: ${embed.title}`);
+  for (const channelId of channels) {
+    await api(`/channels/${channelId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ embeds: [embed], allowed_mentions: { parse: [] } }),
+    });
+    console.log(`✅ Terkirim ke channel ${channelId}: ${embed.title}`);
+  }
 } catch (e) {
   // jangan bikin workflow merah cuma gara-gara notifikasi gagal
   console.error('❌ Gagal kirim:', e.message);
