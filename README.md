@@ -209,6 +209,7 @@ Orang lain ngetik `zomai` → **nggak dibalas apa-apa**, dan command ini **nggak
 | `zomai emoji` | Cuma emoji kustom (`:zomai_coin:` `:zomai_heart:` `:zomai_star:` `:zomai_shield:` `:zomai_crown:` `:zomai_check:`) |
 | `zomai say <pesan>` | Kirim pengumuman ke channel sekarang |
 | `zomai stats` | Jumlah server, user, ping, uptime, jumlah akun ekonomi |
+| `zomai bersih` | Hapus channel **duplikat kosong** (mis. sisa klik tiket dobel) |
 | `zomai whoami` | Lihat ID kamu + owner terdaftar |
 | `zomai claim <kode>` | Darurat: klaim akses owner kalau deteksi otomatis gagal (`OWNER_SECRET`, default `SETUP_SECRET`) |
 
@@ -243,6 +244,7 @@ Nggak perlu setting webhook manual. Workflow `.github/workflows/github-to-discor
 | fork (🍴) | repo di-fork |
 
 - Channel dicari **otomatis**: `#staff-log` → `#github` → `#webhook` → `#mod-log` → `#staff-chat`.
+- Kalau bot ada di **beberapa server**, notifikasi dikirim ke channel itu di **semua server** (1 channel per server).
 - Commit data bot (`[skip ci]`) dilewati, jadi channel nggak spam.
 - Mau tes? Buka **Actions → GitHub → Discord (staff log) → Run workflow**.
 - Cek channel yang bakal dipakai: `/api/channels?secret=<SETUP_SECRET>`.

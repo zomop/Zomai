@@ -71,7 +71,7 @@ const panelEmbed = (guildCount, tier) => {
       },
       {
         name: '🧰 Lainnya',
-        value: '`zomai dm` — kirim panel ini ke DM kamu\n`zomai say <pesan>` — pengumuman\n`zomai tiket` — buka tiket buat kamu\n`zomai whoami` — cek ID kamu',
+        value: '`zomai dm` — kirim panel ini ke DM kamu\n`zomai say <pesan>` — pengumuman\n`zomai tiket` — buka tiket buat kamu\n`zomai bersih` — hapus channel duplikat kosong\n`zomai whoami` — cek ID kamu',
         inline: false,
       },
       tier === 'founder'
@@ -127,7 +127,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('owner')
     .setDescription('🔒 Owner only')
-    .addStringOption(o => o.setName('aksi').setDescription('build / roles / channels / emoji / say / dm / panel').setRequired(false))
+    .addStringOption(o => o.setName('aksi').setDescription('build / roles / channels / emoji / say / dm / tiket / bersih / panel').setRequired(false))
     .addStringOption(o => o.setName('isi').setDescription('Teks tambahan (untuk say / claim)').setRequired(false)),
   async execute(interaction) {
     const client = interaction.client;
@@ -251,6 +251,39 @@ module.exports = {
       return interaction.channel.send({ embeds: [new EmbedBuilder().setColor(0x5865f2).setDescription(text).setFooter({ text: '📣 Pengumuman' })] });
     }
 
+    // ---------- bersihin duplikat (channel kosong dobel) ----------
+    if (['bersih', 'cleanup', 'bersihin'].includes(aksi)) {
+      const dupe = new Map();
+      for (const ch of guild.channels.cache.values()) {
+        if (ch.type !== 0 && ch.type !== 2) continue;
+        const arr = dupe.get(ch.name) || [];
+        arr.push(ch);
+        dupe.set(ch.name, arr);
+      }
+      const removed = [];
+      for (const [name, list] of dupe) {
+        if (list.length < 2) continue;
+        for (const ch of list.slice(1)) {
+          try {
+            const msgs = await ch.messages.fetch({ limit: 1 });
+            if (msgs.size === 0) {
+              await ch.delete('Zomai: bersihin channel duplikat kosong');
+              removed.push(name);
+            }
+          } catch {}
+        }
+      }
+      await priv.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(removed.length ? 0x57f287 : 0xfee75c)
+            .setDescription(removed.length ? `🧹 Dihapus ${removed.length} channel duplikat kosong:\n${[...new Set(removed)].map(n => `• \`${n}\``).join('\n')}` : '✅ Nggak ada channel duplikat kosong.'),
+        ],
+      });
+      priv.autoCleanup();
+      return;
+    }
+
     if (aksi === 'tiket' || aksi === 'ticket') {
       const { channel, existing } = await openTicket(guild, user, { reason: isi });
       await priv.reply({
@@ -295,7 +328,7 @@ module.exports = {
         result.emojis = await createEmojis(guild, progress.log);
       } else {
         await priv.edit({
-          embeds: [new EmbedBuilder().setColor(0xed4245).setDescription(`Aksi \`${aksi}\` nggak dikenal.\nPilihan: \`build\`, \`roles\`, \`channels\`, \`emoji\`, \`say\`, \`dm\`, \`tiket\`, \`stats\`, \`panel\``)],
+          embeds: [new EmbedBuilder().setColor(0xed4245).setDescription(`Aksi \`${aksi}\` nggak dikenal.\nPilihan: \`build\`, \`roles\`, \`channels\`, \`emoji\`, \`say\`, \`dm\`, \`tiket\`, \`bersih\`, \`stats\`, \`panel\``)],
         });
         priv.autoCleanup();
         return;
