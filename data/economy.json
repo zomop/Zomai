@@ -2,7 +2,7 @@
   "users": {
     "1447164217978261628_1378952029640065045": {
       "coins": 25,
-      "xp": 84,
+      "xp": 96,
       "level": 1,
       "job": null,
       "daily": 1795808690675,
@@ -13,7 +13,7 @@
         "gambled": 1800,
         "won": 0,
         "hunted": 0,
-        "commands": 7
+        "commands": 8
       },
       "createdAt": 1795808690675
     }
