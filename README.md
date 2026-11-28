@@ -15,7 +15,7 @@ Bot Discord multifungsi: cek Roblox, cek GitHub, sync notifikasi GitHub, moderas
 | Command | Deskripsi |
 |---|---|
 | `/github-check <username>` | **Cek akun GitHub** — info lengkap user + 5 repo terbaru |
-| `/github <owner/repo>` | Info repository (stars, forks, language, dll) |
+| `/github <owner/repo>` | Info repository (stars, forks, language, dll) — ketik `github zomop` juga bisa, tampil profil user |
 | `/github-user <username>` | Info user GitHub + repo terbaru |
 | `/github-pr <owner/repo>` | List Pull Request yang terbuka |
 | `/setup-github #channel` | Admin: atur channel notifikasi GitHub untuk server ini |
@@ -193,7 +193,7 @@ Slash command tetap jalan semua (`/roblox`, `/daily`, …).
 | `profile` / `profil` | Statistik lengkap | — |
 | `slots <taruhan>` | Slot machine | — |
 | `rps batu\|gunting\|kertas [taruhan]` | Suit lawan bot | — |
-| `trivia` | Kuis (85+ soal), jawab di chat, menang 200 koin | 90 detik/orang |
+| `trivia` | Kuis (85+ soal), jawab di chat — **langsung dibalas benar/salah**, menang 200 koin, 3 tebakan/orang | 90 detik/orang |
 | `ship @user` / `rate @user` | Fun | — |
 
 Level & XP naik otomatis tiap kali pakai command. Data disimpan di `data/economy.json`
