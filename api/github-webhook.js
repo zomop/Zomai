@@ -42,9 +42,41 @@ function verify(raw, sig) {
   return expected.length === got.length && crypto.timingSafeEqual(expected, got);
 }
 
+/**
+ * Cari channel otomatis kalau GITHUB_CHANNEL_ID belum diisi:
+ * staff-log → github → webhook → mod-log → staff-chat
+ */
+let AUTO_CACHE = null;
+async function autoChannel() {
+  if (CHANNEL_ID) return CHANNEL_ID;
+  if (AUTO_CACHE) return AUTO_CACHE;
+  const h = { Authorization: `Bot ${TOKEN}`, 'User-Agent': 'ZomaiBot/1.0' };
+  const get = async path => {
+    const r = await fetch(API + path, { headers: h }).catch(() => null);
+    return r && r.ok ? r.json().catch(() => null) : null;
+  };
+  try {
+    const guilds = (await get('/users/@me/guilds')) || [];
+    for (const g of guilds) {
+      const chans = (await get(`/guilds/${g.id}/channels`)) || [];
+      const texts = (Array.isArray(chans) ? chans : []).filter(c => c.type === 0);
+      for (const name of ['staff-log', 'github', 'webhook', 'mod-log', 'staff-chat']) {
+        const found = texts.find(c => c.name === name);
+        if (found) {
+          AUTO_CACHE = found.id;
+          return AUTO_CACHE;
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[github-webhook] autoChannel', e.message);
+  }
+  return null;
+}
+
 async function send(embed, channelOverride) {
-  const target = channelOverride || CHANNEL_ID;
-  if (!target) return console.warn('[github-webhook] channel belum diset (env GITHUB_CHANNEL_ID atau ?channel=)');
+  const target = channelOverride || (await autoChannel());
+  if (!target) return console.warn('[github-webhook] channel belum diset (env GITHUB_CHANNEL_ID / channel bernama staff-log)');
   const res = await fetch(`${API}/channels/${target}/messages`, {
     method: 'POST',
     headers: { Authorization: `Bot ${TOKEN}`, 'Content-Type': 'application/json', 'User-Agent': 'ZomaiBot/1.0' },

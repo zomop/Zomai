@@ -1,0 +1,48 @@
+name: GitHub → Discord (staff log)
+
+# Kirim aktivitas repo otomatis ke channel #staff-log di server Discord.
+# Nggak perlu setting webhook manual — cukup workflow ini.
+# Channel dicari otomatis (staff-log → github → webhook → mod-log → staff-chat).
+
+on:
+  push:
+  pull_request:
+    types: [opened, reopened, closed, ready_for_review]
+  issues:
+    types: [opened, reopened, closed]
+  release:
+    types: [published]
+  watch: # ⭐ star
+  fork:
+  workflow_dispatch: # tombol "Run workflow" buat tes
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zomai-gh-discord-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Kirim notifikasi ke Discord
+        # lewati commit data bot ([skip ci]) biar channel nggak spam
+        if: ${{ !contains(github.event.head_commit.message || '', '[skip ci]') }}
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        run: node .github/scripts/notify.mjs

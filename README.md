@@ -229,6 +229,27 @@ Orang lain ngetik `zomai` → **nggak dibalas apa-apa**, dan command ini **nggak
 
 Build-nya **idempotent** — dijalankan berkali-kali nggak bikin dobel.
 
+## 🔔 Notifikasi GitHub otomatis ke `#staff-log`
+
+Nggak perlu setting webhook manual. Workflow `.github/workflows/github-to-discord.yml` otomatis kirim ke Discord setiap:
+
+| Event | Contoh isi |
+|---|---|
+| push | judul commit + hash + branch |
+| pull_request | dibuka / di-merge / ditutup / siap review |
+| issues | dibuka / ditutup |
+| release | tag + catatan rilis |
+| watch (⭐) | star baru + total star |
+| fork (🍴) | repo di-fork |
+
+- Channel dicari **otomatis**: `#staff-log` → `#github` → `#webhook` → `#mod-log` → `#staff-chat`.
+- Commit data bot (`[skip ci]`) dilewati, jadi channel nggak spam.
+- Mau tes? Buka **Actions → GitHub → Discord (staff log) → Run workflow**.
+- Cek channel yang bakal dipakai: `/api/channels?secret=<SETUP_SECRET>`.
+- Kalau mau ganti tujuan: set env/repo-secret `DISCORD_CHANNEL_ID` = ID channel.
+
+> Alternatif (kalau mau webhook GitHub asli): pasang webhook ke `https://zomai-bot-andre-dev4.vercel.app/api/github-webhook` dengan secret `GITHUB_WEBHOOK_SECRET`. Endpoint ini juga auto-deteksi channel yang sama.
+
 ## 🎫 Tiket & ✅ Verifikasi
 
 - **Auto-role**: siapa pun yang join otomatis dapat **👤 Member** (event `guildMemberAdd`).
