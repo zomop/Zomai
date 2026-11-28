@@ -193,7 +193,7 @@ Slash command tetap jalan semua (`/roblox`, `/daily`, …).
 | `profile` / `profil` | Statistik lengkap | — |
 | `slots <taruhan>` | Slot machine | — |
 | `rps batu\|gunting\|kertas [taruhan]` | Suit lawan bot | — |
-| `trivia` | Kuis, jawab di chat, menang 300 koin | — |
+| `trivia` | Kuis (85+ soal), jawab di chat, menang 200 koin | 90 detik/orang |
 | `ship @user` / `rate @user` | Fun | — |
 
 Level & XP naik otomatis tiap kali pakai command. Data disimpan di `data/economy.json`

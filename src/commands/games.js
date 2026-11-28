@@ -5,6 +5,14 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const eco = require('../utils/economy');
 const { errorEmbed } = require('../utils/embed');
+const TRIVIA_BANK = require('../utils/triviaBank');
+
+// Anti-exploit trivia
+const activeTrivia = new Map(); // channelId -> waktu mulai
+const triviaCooldown = new Map(); // userId -> timestamp terakhir main
+const TRIVIA_COOLDOWN = 90 * 1000; // 1x per 90 detik per orang
+const TRIVIA_REWARD = 200;
+const TRIVIA_ATTEMPTS = 3;
 
 const SLOT = ['🍒', '🍋', '🍊', '🔔', '💎', '7️⃣'];
 
@@ -74,40 +82,65 @@ async function rps(i) {
   });
 }
 
-const TRIVIA = [
-  { q: 'Ibu kota Indonesia?', a: ['jakarta'] },
-  { q: 'Planet terdekat dari Matahari?', a: ['merkurius'] },
-  { q: 'Hewan tercepat di darat?', a: ['cheetah', 'citah'] },
-  { q: 'Berapa 12 x 12?', a: ['144'] },
-  { q: 'Lagu kebangsaan Indonesia?', a: ['indonesia raya'] },
-  { q: 'Gas yang dihirup manusia?', a: ['oksigen', 'o2'] },
-  { q: 'Negara asal anime?', a: ['jepang'] },
-  { q: 'Roblox didirikan tahun?', a: ['2006'] },
-  { q: 'Warna campuran biru + kuning?', a: ['hijau'] },
-  { q: 'Satuan arus listrik?', a: ['ampere', 'amp'] },
-];
-
 async function trivia(i) {
-  const item = TRIVIA[Math.floor(Math.random() * TRIVIA.length)];
+  const now = Date.now();
+  const last = triviaCooldown.get(i.user.id) || 0;
+  if (now - last < TRIVIA_COOLDOWN) {
+    return i.reply({ embeds: [errorEmbed(`Sabar ya 😅 Kamu bisa main trivia lagi dalam **${eco.fmtDuration(last + TRIVIA_COOLDOWN - now)}**.`)] });
+  }
+
+  const busy = activeTrivia.get(i.channel.id);
+  if (busy && now - busy < 45000) {
+    return i.reply({ embeds: [errorEmbed('Masih ada trivia berjalan di channel ini. Tunggu selesai dulu ya.')] });
+  }
+
+  const item = TRIVIA_BANK[Math.floor(Math.random() * TRIVIA_BANK.length)];
+  const unique = Array.from(new Set(item.a));
+  triviaCooldown.set(i.user.id, now);
+  activeTrivia.set(i.channel.id, now);
+
   await i.reply({
     embeds: [
       new EmbedBuilder()
         .setColor(0x5865f2)
         .setTitle('🧠 Trivia')
-        .setDescription(`**${item.q}**\n\nJawab langsung di chat (20 detik). Hadiah: **300 🪙**`)
-        .setFooter({ text: 'Ketik jawabanmu biasa aja, tanpa command' }),
+        .setDescription(
+          `**${item.q}**\n\nJawab langsung di chat — hadiah **${TRIVIA_REWARD} 🪙**\n` +
+            `⏳ Waktu 20 detik • maksimal **${TRIVIA_ATTEMPTS}** tebakan • 1x per 90 detik/orang`,
+        )
+        .setFooter({ text: 'Jawaban salah memakai jatah tebakan' }),
     ],
   });
 
-  const channel = i.channel;
-  const filter = m => !m.author.bot && item.a.some(a => m.content.toLowerCase().includes(a));
-  const collected = await channel.awaitMessages({ filter, max: 1, time: 20000 }).catch(() => null);
-  const msg = collected?.first?.();
-  if (!msg) {
-    return channel.send({ embeds: [new EmbedBuilder().setColor(0xed4245).setDescription(`⏰ Waktu habis! Jawaban: **${item.a[0]}**`)] }).catch(() => {});
+  let winner = null;
+  try {
+    const collected = await i.channel.awaitMessages({
+      filter: m => !m.author.bot && m.content.trim().length > 0,
+      max: TRIVIA_ATTEMPTS,
+      time: 20000,
+    });
+    for (const msg of collected.values()) {
+      const text = msg.content.toLowerCase();
+      if (unique.some(ans => ans.length > 1 ? text.includes(ans) : new RegExp(`\\b${ans}\\b`).test(text))) {
+        winner = msg;
+        break;
+      }
+    }
+  } catch {
+    /* waktu habis */
+  } finally {
+    activeTrivia.delete(i.channel.id);
   }
-  eco.addCoins(i.guild.id, msg.author.id, 300);
-  return channel.send({ embeds: [new EmbedBuilder().setColor(0x57f287).setDescription(`✅ <@${msg.author.id}> benar! Jawaban: **${item.a[0]}** — dapat **300 🪙**`)] }).catch(() => {});
+
+  if (winner) {
+    eco.addCoins(i.guild.id, winner.author.id, TRIVIA_REWARD);
+    return i.channel
+      .send({ embeds: [new EmbedBuilder().setColor(0x57f287).setDescription(`✅ <@${winner.author.id}> benar! Jawaban: **${unique[0]}** — dapat **${TRIVIA_REWARD} 🪙**`)] })
+      .catch(() => {});
+  }
+  return i.channel
+    .send({ embeds: [new EmbedBuilder().setColor(0xed4245).setDescription(`⏰ Waktu habis / tebakan habis. Jawaban: **${unique[0]}**`)] })
+    .catch(() => {});
 }
 
 function hash(str) {

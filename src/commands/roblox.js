@@ -12,7 +12,8 @@ module.exports = {
     const username = interaction.options.getString('username');
 
     try {
-      const found = await getUserByUsername(username);
+      // Kalau yang diketik angka (User ID), langsung ambil detailnya — 1 request lebih cepat
+      const found = /^\d{1,20}$/.test(username) ? { id: username } : await getUserByUsername(username);
       if (!found) {
         return interaction.editReply({ embeds: [errorEmbed(`User **${username}** tidak ditemukan di Roblox.\nPastikan ejaan username benar (case-sensitive untuk nama).`)] });
       }

@@ -12,8 +12,8 @@ const headers = {
   ...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
 };
 
-async function fetchJSON(path) {
-  const res = await fetch(`${GITHUB_API}${path}`, { headers });
+async function fetchJSON(path, timeout = 3000) {
+  const res = await fetch(`${GITHUB_API}${path}`, { headers, signal: AbortSignal.timeout(timeout) });
   if (!res.ok) {
     if (res.status === 404) return null;
     const text = await res.text().catch(() => '');
