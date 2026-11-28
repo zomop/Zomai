@@ -12,6 +12,7 @@ const THUMB_API = 'https://thumbnails.roblox.com/v1';
 async function fetchJSON(url, options = {}) {
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json', 'User-Agent': 'ZomaiBot/1.0' },
+    signal: AbortSignal.timeout(options.timeout || 2500),
     ...options,
   });
   if (!res.ok) {
@@ -31,6 +32,18 @@ async function getUserByUsername(username) {
 }
 
 async function _getUserByUsername(username) {
+  // Endpoint khusus username (1 request, cepat)
+  try {
+    const exactRes = await fetchJSON('https://users.roblox.com/v1/usernames/users', {
+      method: 'POST',
+      body: JSON.stringify({ usernames: [username], excludeBannedUsers: false }),
+      timeout: 2000,
+    });
+    const found = exactRes.data?.[0];
+    if (found) return { id: found.id, name: found.name, displayName: found.displayName };
+  } catch {}
+
+  // Fallback: pencarian biasa
   const data = await fetchJSON(`${ROBLOX_API}/users/search`, {
     method: 'POST',
     body: JSON.stringify({ keyword: username, excludeBannedUsers: false }),
@@ -47,10 +60,13 @@ async function getUserById(userId) {
 }
 
 async function _getUserById(userId) {
-  const [user, counts, presence] = await Promise.allSettled([
-    fetchJSON(`${ROBLOX_API}/users/${userId}`),
-    fetchJSON(`${ROBLOX_API}/users/${userId}/followers/counts`),
-    fetchJSON(`${ROBLOX_API}/users/${userId}/presence`),
+  // Semua request dijalankan PARALEL (sebelumnya thumbnail 2x jalan berurutan → lambat)
+  const [user, counts, presence, bust, head] = await Promise.allSettled([
+    fetchJSON(`${ROBLOX_API}/users/${userId}`, { timeout: 2500 }),
+    fetchJSON(`${ROBLOX_API}/users/${userId}/followers/counts`, { timeout: 2500 }),
+    fetchJSON(`${ROBLOX_API}/users/${userId}/presence`, { timeout: 1200 }),
+    fetchJSON(`${THUMB_API}/users/avatar-headshot?userIds=${userId}&size=420x420&format=Png`, { timeout: 2000 }),
+    fetchJSON(`${THUMB_API}/users/avatar-bust?userIds=${userId}&size=150x150&format=Png`, { timeout: 1500 }),
   ]);
 
   const userData = user.status === 'fulfilled' ? user.value : null;
@@ -58,20 +74,8 @@ async function _getUserById(userId) {
 
   const countsData = counts.status === 'fulfilled' ? counts.value : {};
   const presenceData = presence.status === 'fulfilled' ? presence.value : {};
-
-  // Avatar thumbnail
-  let avatarUrl = null;
-  try {
-    const thumb = await fetchJSON(`${THUMB_API}/users/avatar-bust?userIds=${userId}&size=150x150&format=Png`);
-    avatarUrl = thumb.data?.[0]?.imageUrl || null;
-  } catch {}
-
-  // Headshot
-  let headshotUrl = null;
-  try {
-    const thumb = await fetchJSON(`${THUMB_API}/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png`);
-    headshotUrl = thumb.data?.[0]?.imageUrl || null;
-  } catch {}
+  const avatarUrl = head.status === 'fulfilled' ? head.value.data?.[0]?.imageUrl || null : null;
+  const headshotUrl = avatarUrl || (bust.status === 'fulfilled' ? bust.value.data?.[0]?.imageUrl || null : null);
 
   const isOnline = presenceData.userPresence?.isOnline || false;
   const lastLocation = presenceData.userPresence?.lastLocation || null;
