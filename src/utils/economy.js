@@ -44,11 +44,15 @@ function raw(guildId, userId) {
       hunt: 0,
       streak: 0,
       stats: { gambled: 0, won: 0, hunted: 0, commands: 0 },
+      banner: null, // key banner preset atau URL custom
+      owned: [], // banner yang sudah dibeli pakai koin
       createdAt: Date.now(),
     };
   }
   const u = store.data.users[k];
   u.stats = u.stats || { gambled: 0, won: 0, hunted: 0, commands: 0 };
+  u.banner = u.banner || null;
+  if (!Array.isArray(u.owned)) u.owned = [];
   return u;
 }
 

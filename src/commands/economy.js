@@ -4,6 +4,8 @@
  */
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const eco = require('../utils/economy');
+const banners = require('../utils/banners');
+const { makePrivate } = require('../utils/private');
 const { errorEmbed } = require('../utils/embed');
 
 const C = 0x2ecc71;
@@ -195,23 +197,57 @@ async function leaderboard(i) {
 }
 
 async function profile(i) {
+  // balasan privat: cuma yang manggil yang lihat
+  const priv = makePrivate(i);
   const target = i.options.getUser('user') || i.user;
-  const u = eco.getUser(scopeId(i), target.id);
+  const uid = scopeId(i);
+  const u = eco.getUser(uid, target.id);
+  const active = banners.resolve(u.banner);
+
+  const rows = eco.top(uid, 500);
+  const idx = rows.findIndex(r => r.id === target.id);
+  const rank = idx >= 0 ? idx + 1 : null;
+
+  const badges = [];
+  if ((u.streak || 0) >= 7) badges.push('🔥 Streak 7+');
+  if ((u.coins || 0) >= 10000) badges.push('💰 Sultan');
+  if (rank === 1) badges.push('🏆 #1 Server');
+  if ((u.level || 1) >= 10) badges.push('🎖️ Veteran');
+  if ((u.stats?.commands || 0) >= 100) badges.push('⚡ Rajin');
+  const member = i.guild?.members?.fetch ? await i.guild.members.fetch(target.id).catch(() => null) : null;
+  if (member?.roles?.cache?.some?.(r => String(r.name || '').includes('Verified'))) badges.push('✅ Verified');
+  if (!badges.length) badges.push('🌱 Pemula');
+
+  const need = eco.levelCost(u.level);
+  const job = u.job && eco.JOBS[u.job] ? eco.JOBS[u.job].label : '—';
+  let avatar = null;
+  try {
+    avatar = target.displayAvatarURL({ size: 256 });
+  } catch {}
+
   const embed = new EmbedBuilder()
-    .setColor(C)
-    .setAuthor({ name: `Profil ${target.username}`, iconURL: target.displayAvatarURL() })
-    .setThumbnail(target.displayAvatarURL({ size: 256 }))
-    .addFields(
-      { name: '🪙 Koin', value: eco.coins(u.coins), inline: true },
-      { name: '⭐ Level', value: `${u.level}`, inline: true },
-      { name: '💼 Kerja', value: u.job ? eco.JOBS[u.job]?.label || u.job : '—', inline: true },
-      { name: '🎯 Total Command', value: `${u.stats.commands || 0}`, inline: true },
-      { name: '🏹 Total Buruan', value: `${u.stats.hunted || 0}`, inline: true },
-      { name: '🎲 Total Taruhan', value: `${u.stats.gambled || 0}`, inline: true },
+    .setColor(active.color)
+    .setAuthor({ name: `Kartu Profil • ${target.username}`, iconURL: avatar || undefined })
+    .setTitle(`⭐ Level ${u.level}  •  ${eco.coins(u.coins)}`)
+    .setDescription(
+      `\`${eco.xpBar(u)}\` ${u.xp}/${need} XP${rank ? `  •  🏅 Peringkat **#${rank}**` : ''}\n` +
+        `${badges.join('   ')}`,
     )
-    .setFooter({ text: 'Zomai Economy • ketik: daily, work, hunt' })
+    .addFields(
+      { name: '💼 Kerja', value: job, inline: true },
+      { name: '🔥 Streak', value: `${u.streak || 0} hari`, inline: true },
+      { name: '🎯 Command', value: `${u.stats?.commands || 0}`, inline: true },
+      { name: '🏹 Buruan', value: `${u.stats?.hunted || 0}`, inline: true },
+      { name: '🎲 Taruhan', value: `${u.stats?.gambled || 0}`, inline: true },
+      { name: '🗓️ Main sejak', value: `<t:${Math.floor((u.createdAt || Date.now()) / 1000)}:R>`, inline: true },
+    )
+    .setThumbnail(avatar || null)
+    .setImage(active.url) // GIF banner → gerak di Discord
+    .setFooter({ text: `Banner: ${active.emoji} ${active.label} • ganti: banner <nama> • ${banners.LIST.length} pilihan` })
     .setTimestamp();
-  return i.reply({ embeds: [embed] });
+
+  await priv.reply({ embeds: [embed] });
+  priv.autoCleanup(75 * 1000);
 }
 
 module.exports = {
@@ -229,7 +265,7 @@ module.exports = {
       .addUserOption(o => o.setName('user').setDescription('Penerima').setRequired(true))
       .addIntegerOption(o => o.setName('jumlah').setDescription('Jumlah koin').setRequired(true).setMinValue(1)),
     new SlashCommandBuilder().setName('leaderboard').setDescription('🏆 10 orang terkaya'),
-    new SlashCommandBuilder().setName('profile').setDescription('📊 Profil ekonomi user')
+    new SlashCommandBuilder().setName('profile').setDescription('🪪 Kartu profil (banner GIF, level, badge)')
       .addUserOption(o => o.setName('user').setDescription('User (default: kamu)')),
   ],
   async execute(i) {

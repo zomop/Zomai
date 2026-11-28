@@ -576,6 +576,7 @@ const HANDLERS = {
   pay: hNoEconomy,
   leaderboard: hNoEconomy,
   profile: hNoEconomy,
+  banner: hNoEconomy,
   trivia: hNoEconomy,
   // game tanpa ekonomi
   slots: hSlots,

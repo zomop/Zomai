@@ -19,7 +19,8 @@ module.exports = {
       .addFields(
         { name: '🎮 Roblox', value: '`roblox <username>` / `rbx <username>`\n`roblox-search <keyword>`', inline: false },
         { name: '🐙 GitHub', value: '`github-check <username>` / `gh <username>`\n`github <owner/repo>` — info repo\n`github-pr <owner/repo>` — PR terbuka\n`setup-github #channel` — atur notifikasi (admin)', inline: false },
-        { name: '💰 Ekonomi (ala owo)', value: '`balance` — saldo & level\n`daily` — hadiah harian + streak\n`work` — kerja dapet koin (45 menit)\n`job [nama]` — pilih pekerjaan\n`hunt` — berburu hewan (30 detik)\n`bet <koin>` — taruhan 48%\n`pay @user <koin>` / `tf` — transfer\n`profile` `leaderboard` / `lb`', inline: false },
+        { name: '💰 Ekonomi (ala owo)', value: '`balance` — saldo & level\n`daily` — hadiah harian + streak\n`work` — kerja dapet koin (45 menit)\n`job [nama]` — pilih pekerjaan\n`hunt` — berburu hewan (30 detik)\n`bet <koin>` — taruhan 48%\n`pay @user <koin>` / `tf` — transfer\n`profile` — kartu profil + banner GIF bergerak\n`leaderboard` / `lb`', inline: false },
+        { name: '🖼️ Kartu profil', value: '`profile` / `kartu` — kartu profil: banner GIF animasi, level, badge, peringkat\n`banner` — galeri 8 banner\n`banner neon` `banner galaxy` `banner sakura` …\n`banner beli gold` — beli banner VIP pakai koin\n`banner <link gif>` — banner custom\n`banner off` / `banner random`', inline: false },
         { name: '🎮 Mini games', value: '`slots <taruhan>`\n`rps batu|gunting|kertas [taruhan]`\n`trivia` — jawab di chat, menang 200 koin\n`ship @user` `rate @user`\n`8ball` `coinflip` `dice` `meme`', inline: false },
         { name: '🛠️ Utility', value: '`ping` `avatar` `serverinfo` `userinfo` `botinfo` `invite`', inline: false },
         { name: '🎫 Bantuan & verifikasi', value: '`tiket` — buka channel privat dengan staff\n`tiket tutup` — tutup tiket\n`verify` — ambil role ✅ Verified (atau klik tombol di #verify)', inline: false },
